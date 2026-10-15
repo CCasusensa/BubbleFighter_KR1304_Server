@@ -3,6 +3,7 @@ param(
     [ValidateSet('Debug', 'Release')]
     [string]$Configuration = 'Release',
     [string]$MySqlRoot,
+    [string]$WindowsSdkVersion,
     [ValidateRange(1, 16)]
     [int]$ParallelBuildCount = 4
 )
@@ -31,6 +32,7 @@ $errorLog = Join-Path $logs "build-$Configuration.errors.log"
 Push-Location $repositoryRoot
 try {
     & $msbuild BubbleFighter.Server.sln /m:2 /nologo /v:minimal `
+        @(if ($WindowsSdkVersion) { "/p:WindowsTargetPlatformVersion=$WindowsSdkVersion" }) `
         "/p:Configuration=$Configuration" /p:Platform=x64 `
         "/p:CL_MPCount=$ParallelBuildCount" "/p:MySqlRoot=$MySqlRoot" `
         "/flp:logfile=$buildLog;verbosity=normal;encoding=UTF-8" `

@@ -85,7 +85,7 @@ Show command-line help:
 Listen without a database for a basic connection check:
   .\BubbleFighter.Server.exe --listen-port 0 --once
 
-Game accounts and persistent features require a local MySQL database with TLS.
+Game accounts and persistent features require supported MySQL 8.4 with TLS.
 Copy config/examples/database.ini to a private configuration file and edit it.
 Apply only migrations that have not already run, in this order:
   create_accounts.sql
@@ -105,6 +105,11 @@ Apply only migrations that have not already run, in this order:
   create_training_clan_history.sql
   create_friend_groups.sql
   create_social_messages.sql
+  create_cash_purchases.sql
+  create_gifts.sql
+  create_cash_bundles.sql
+  create_gift_bundles.sql
+  add_battle_records.sql
 The scripts are in database/migrations; the program does not apply them.
 Start the configured server, replacing the example path and port:
   .\BubbleFighter.Server.exe --listen-port 40000 --database-config .\Database.ini

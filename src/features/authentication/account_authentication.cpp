@@ -87,4 +87,12 @@ std::optional<std::uint64_t> AccountAuthentication::ConsumeTicket(
   }
   return store_.ConsumeTicket(CredentialCrypto::HashTicket(ticket));
 }
+
+std::optional<std::uint64_t> AccountAuthentication::FindAccountId(
+    std::string_view username) {
+  const auto account = store_.FindAccount(NormalizeUsername(username));
+  if (!account || account->account_id == 0 || account->is_disabled)
+    return std::nullopt;
+  return account->account_id;
+}
 }  // namespace bubble_fighter::server::features::authentication

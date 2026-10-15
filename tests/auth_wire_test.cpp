@@ -97,5 +97,29 @@ int RunAuthWireTests() {
           wire::Action::kPolicy);
   Reject([] { wire::EncodeRequest({wire::Action::kPolicy, "abc", "def"}); });
   Reject([&] { wire::DecodePolicyResponse(encoded); });
+
+  // A registration may carry the character name the account starts with.
+  // Older launchers omit it and keep the exact same registrations working.
+  wire::AuthRequest registration;
+  registration.action = wire::Action::kRegister;
+  registration.username = "test01";
+  registration.password = "secret-one";
+  const auto plain = wire::EncodeRequest(registration);
+  const auto with_name = wire::EncodeRequest(
+      {wire::Action::kRegister, "test01", "secret-one", "TianYa"});
+  Require(with_name.size() == plain.size() + 8);
+  const auto decoded_registration = wire::DecodeRequest(with_name);
+  Require(decoded_registration.action == wire::Action::kRegister &&
+          decoded_registration.username == "test01" &&
+          decoded_registration.character_name == "TianYa");
+  Require(wire::DecodeRequest(plain).character_name.empty());
+  // The field belongs to registration only.
+  Reject([] {
+    wire::EncodeRequest({wire::Action::kLogin, "test01", "secret-one", "TianYa"});
+  });
+  Reject([] { wire::EncodeRequest({wire::Action::kHealth, "", "", "TianYa"}); });
+  for (std::size_t size = 0; size < with_name.size(); ++size) {
+    Reject([&] { wire::DecodeRequest(std::span(with_name).first(size)); });
+  }
   return static_cast<int>(frame.size()) + 24;
 }

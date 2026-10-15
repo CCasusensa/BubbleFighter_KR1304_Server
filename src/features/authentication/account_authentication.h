@@ -14,6 +14,9 @@ class AccountAuthentication {
   std::optional<std::string> Login(std::string_view username,
                                    std::string_view password);
   std::optional<std::uint64_t> ConsumeTicket(std::string_view ticket);
+  // Administrative lookup used by registration-time provisioning; it grants
+  // no authentication by itself.
+  std::optional<std::uint64_t> FindAccountId(std::string_view username);
   static std::string NormalizeUsername(std::string_view username);
 
  private:

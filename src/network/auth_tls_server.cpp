@@ -20,14 +20,19 @@
 #include <chrono>
 #include <iostream>
 #include <memory>
+#include <optional>
 #include <stdexcept>
+#include <string>
 #include <syncstream>
 #include <thread>
 #include <utility>
 
+#include "features/characters/character_creation.h"
 #include "features/authentication/remote_auth.h"
 #include "network/tcp_server.h"
 #include "persistence/my_sql_account_store.h"
+#include "persistence/my_sql_character_store.h"
+#include "protocol/characters/create_user_info_request.h"
 
 namespace bubble_fighter::server::network {
 namespace {
@@ -365,6 +370,45 @@ wire::AuthResponse Failure(wire::ErrorCode code) {
                        ? "Invalid account request." : "Authentication failed.";
   return result;
 }
+
+// Registration-created characters start with this appearance; the client's own
+// creation window offers the other supported pairs.
+constexpr std::uint32_t kRegistrationCharacterType = 27;
+constexpr std::uint32_t kRegistrationColorIndex = 2;
+
+std::optional<std::u16string> ToUtf16(std::string_view text) {
+  const int units = MultiByteToWideChar(
+      CP_UTF8, MB_ERR_INVALID_CHARS, text.data(), static_cast<int>(text.size()),
+      nullptr, 0);
+  if (units <= 0) return std::nullopt;
+  std::wstring wide(static_cast<std::size_t>(units), L'\0');
+  MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, text.data(),
+                      static_cast<int>(text.size()), wide.data(), units);
+  return std::u16string(wide.begin(), wide.end());
+}
+
+bool HasAvailableCharacterName(const std::filesystem::path& configuration,
+                               std::string_view utf8_name) {
+  const auto wide = ToUtf16(utf8_name);
+  if (!wide ||
+      features::characters::CharacterCreation::ValidateName(*wide) != 0)
+    return false;
+  persistence::MySqlCharacterStore characters(configuration);
+  return !characters.NameExists(*wide);
+}
+
+bool ProvisionCharacter(const std::filesystem::path& configuration,
+                        std::uint64_t account_id, std::string_view utf8_name) {
+  const auto wide = ToUtf16(utf8_name);
+  if (!wide) return false;
+  persistence::MySqlCharacterStore characters(configuration);
+  features::characters::CharacterCreation creation(characters);
+  protocol::CreateUserInfoRequest request;
+  request.character_name = *wide;
+  request.character_type = kRegistrationCharacterType;
+  request.color_index = kRegistrationColorIndex;
+  return creation.Create(account_id, request) == 0;
+}
 void Serve(SOCKET socket, Credential& credential,
            const AuthTlsServer::RequestHandler& handler, std::string_view peer,
            std::stop_token stop) {
@@ -410,8 +454,17 @@ int AuthTlsServer::Run(
         try {
           persistence::MySqlAccountStore store(database_configuration);
           features::authentication::AccountAuthentication accounts(store);
-          return features::authentication::RemoteAuth(limiter, policy).Handle(
-              request, accounts, peer, Clock::now());
+          auto check = [database_configuration](std::string_view name) {
+            return HasAvailableCharacterName(database_configuration, name);
+          };
+          auto provision = [database_configuration](
+                               std::uint64_t account_id,
+                               std::string_view name) {
+            return ProvisionCharacter(database_configuration, account_id, name);
+          };
+          return features::authentication::RemoteAuth(
+                     limiter, policy, std::move(check), std::move(provision))
+              .Handle(request, accounts, peer, Clock::now());
         } catch (...) {
           return Failure(wire::ErrorCode::kUnavailable);
         }

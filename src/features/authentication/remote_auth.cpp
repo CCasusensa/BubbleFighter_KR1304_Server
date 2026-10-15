@@ -35,6 +35,11 @@ Response Failure(Error error) {
                                      : "Authentication failed.";
   return response;
 }
+Response CharacterFailure() {
+  auto response = Failure(Error::kBadRequest);
+  response.message = "Character name is invalid or already taken.";
+  return response;
+}
 }  // namespace
 
 bool AttemptLimiter::Allow(std::string_view peer_ip, Action action,
@@ -101,8 +106,18 @@ Response RemoteAuth::Handle(const protocol::auth::AuthRequest& request,
     return Failure(Error::kRateLimited);
   try {
     if (request.action == Action::kRegister) {
+      const bool wants_character = !request.character_name.empty();
+      if (wants_character &&
+          (!check_ || !provision_ || !check_(request.character_name)))
+        return CharacterFailure();
       if (!accounts.CreateAccount(request.username, request.password))
         return Failure(Error::kDuplicate);
+      if (wants_character) {
+        const auto account_id = accounts.FindAccountId(request.username);
+        if (!account_id ||
+            !provision_(*account_id, request.character_name))
+          return Failure(Error::kUnavailable);
+      }
       return {};
     }
     const auto ticket = accounts.Login(request.username, request.password);

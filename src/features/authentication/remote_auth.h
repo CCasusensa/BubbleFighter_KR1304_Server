@@ -3,6 +3,7 @@
 
 #include <chrono>
 #include <deque>
+#include <functional>
 #include <mutex>
 #include <string>
 #include <unordered_map>
@@ -34,8 +35,19 @@ class AttemptLimiter {
 
 class RemoteAuth {
  public:
-  explicit RemoteAuth(AttemptLimiter& limiter, LauncherPolicy policy = {})
-      : limiter_(limiter), policy_(std::move(policy)) {}
+  // A registration that carries a character name is checked before the
+  // account row is written, then provisioned right after it. Both callbacks
+  // receive the launcher's UTF-8 spelling; a missing pair keeps the previous
+  // registration-only behaviour.
+  using CharacterNameCheck = std::function<bool(std::string_view character_name)>;
+  using CharacterProvisioner =
+      std::function<bool(std::uint64_t account_id, std::string_view character_name)>;
+  explicit RemoteAuth(AttemptLimiter& limiter, LauncherPolicy policy = {},
+                      CharacterNameCheck check = {}, CharacterProvisioner provision = {})
+      : limiter_(limiter),
+        policy_(std::move(policy)),
+        check_(std::move(check)),
+        provision_(std::move(provision)) {}
   protocol::auth::AuthResponse Handle(
       const protocol::auth::AuthRequest& request, AccountAuthentication& accounts,
       std::string_view peer_ip, std::chrono::steady_clock::time_point now);
@@ -43,6 +55,8 @@ class RemoteAuth {
  private:
   AttemptLimiter& limiter_;
   LauncherPolicy policy_;
+  CharacterNameCheck check_;
+  CharacterProvisioner provision_;
 };
 }  // namespace bubble_fighter::server::features::authentication
 

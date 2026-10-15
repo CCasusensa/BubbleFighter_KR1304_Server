@@ -21,6 +21,10 @@ struct AuthRequest {
   Action action = Action::kHealth;
   std::string username;
   std::string password;
+  // kRegister only, optional: the character name the account should start
+  // with. Older launchers leave it empty and keep working; the server then
+  // answers the registration without a character.
+  std::string character_name;
 };
 struct AuthResponse {
   Status status = Status::kOk;

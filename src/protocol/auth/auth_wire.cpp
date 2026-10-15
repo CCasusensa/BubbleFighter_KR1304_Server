@@ -80,7 +80,13 @@ std::vector<std::uint8_t> EncodeRequest(const AuthRequest& request) {
   if (carries_credentials(request.action)) {
     Text(bytes, request.username);
     Text(bytes, request.password);
+    if (!request.character_name.empty()) {
+      if (request.action != Action::kRegister) Invalid();
+      Text(bytes, request.character_name);
+    }
   } else if (!request.username.empty() || !request.password.empty()) Invalid();
+  if (!carries_credentials(request.action) && !request.character_name.empty())
+    Invalid();
   return Frame(std::move(bytes));
 }
 AuthRequest DecodeRequest(std::span<const std::uint8_t> frame) {
@@ -91,6 +97,8 @@ AuthRequest DecodeRequest(std::span<const std::uint8_t> frame) {
   if (carries_credentials(request.action)) {
     request.username = reader.Text();
     request.password = reader.Text();
+    if (request.action == Action::kRegister && !reader.Empty())
+      request.character_name = reader.Text();
   }
   reader.Finish();
   return request;

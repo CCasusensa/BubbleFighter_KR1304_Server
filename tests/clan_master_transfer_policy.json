@@ -1,0 +1,17 @@
+{
+  "scope": "Ordinary clan master transfer with native request, recipient answer, requester commit, and authoritative final notification. No C1039 bypass.",
+  "native_phases": ["C1057 target -> S1058 and target S1059", "target C1060 echoed correlation -> S1061 and requester S1062", "accepted requester C1054 target/name -> committed S1056"],
+  "identity": "Only current authenticated clan connection generations backed by live main sessions; a character ID or echoed value alone never establishes consent.",
+  "scene_policy": "Both main sessions must be in a trusted available plaza, with unchanged scene epochs at each stage and commit decision. Re-entering a plaza does not revive a previous offer. Native failure resource mentions online plaza; requiring both sides throughout is explicit project policy.",
+  "authority": "Actor must still be sole role101 master of an ordinary non-disbanding clan; target is a different enabled member100/102 of same clan. Names and captured target role must remain unchanged through commit.",
+  "correlation": "Nonzero monotonically unique u32 per process, never reused or taken from client identity; native S1059 DWORD is echoed unchanged in C1060, original server meaning remains unknown.",
+  "pending_policy": {"timeout_seconds": 60, "global_limit": 64, "per_clan": 1, "per_participant": 1, "duplicate_requests": "refuse without replacing existing consent"},
+  "request_response": "S1058 {available1,value1=0} on prepared offer; {0,0} for refusal. The second DWORD is opaque except native value2 also fails.",
+  "answer_response": "S1061 byte1 acknowledges a valid answer including explicit rejection; invalid, expired or replayed answers receive byte0. S1062 tells the requester the target decision with trusted target ID/name.",
+  "commit": "Only accepted unexpired one-use grant permits C1054. Consume grant before store call, re-lock characters in ID order then clan, demote old101 to100 then promote captured target100/102 to101 atomically. Failure requires a new consent flow.",
+  "commit_refusal": "S1058 failure and current S1016 resynchronize requester; no fake S1056. DB errors propagate without success.",
+  "notification": "S1056 opaque firstDWORD0, former ID/name, new ID/name to accepted members; authoritative participant profiles/details follow. Unknown fields are explicit zero baselines. Prepare/encode all packets before commit.",
+  "lifetime": "Disconnect, reauthentication, scene change, expiry, disabled account, changed membership/name or consumed grant cannot authorize a later commit. Pending offers are in-memory and never recovered after process restart.",
+  "database": "No new schema is required beyond migration13; officer unique index is respected by demoting before promoting inside one transaction. Rollback restores both roles if the second write fails.",
+  "limits": "Original UI paused; synthetic TCP, native field probes and project policy remain separately described. Training clan99, disband business and category80 remain future work."
+}

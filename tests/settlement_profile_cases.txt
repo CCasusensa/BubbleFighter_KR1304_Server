@@ -1,0 +1,7 @@
+# name before_level before_xp before_lucci before_cash current_level current_xp current_lucci current_cash
+spent 1 0 200 30 1 100 7 3
+later_award 1 0 200 30 4 3500 900 60
+cleared 3 2000 200 30 1 0 0 0
+unchanged 1 0 200 30 1 100 250 30
+maximum 1 0 200 30 260 2147483647 2147483647 2147483647
+other_currency 1 0 200 30 1 100 250 2

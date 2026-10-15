@@ -1,0 +1,85 @@
+{
+  "scope": "Authenticated read-only C1019/S1020 directory, before business implementation",
+  "native": {
+    "page_size": 5,
+    "modes": [
+      4,
+      5,
+      6,
+      7,
+      8
+    ]
+  },
+  "project_policy": {
+    "name_mode": 4,
+    "name_matching": "exact UTF-16LE bytes, case-sensitive",
+    "name_min_units": 1,
+    "name_max_units": 12,
+    "non_name_text": "must be empty",
+    "min_page": 1,
+    "max_page": 10000,
+    "point_modes": [
+      5,
+      8
+    ],
+    "point_order": "ClanPoints DESC, ClanId ASC",
+    "refresh_modes": [
+      6,
+      7
+    ],
+    "refresh_order": "CreatedAtUnixSeconds DESC, ClanId DESC",
+    "recruitment_filter_modes": [
+      7,
+      8
+    ],
+    "recruitment_filter": "IsRecruiting <> 0",
+    "membership_required": false,
+    "identity": "account and character must match, account enabled",
+    "response_header_value": 0,
+    "response_text": "",
+    "last_login_bits": 0,
+    "opaque_scalar_and_qword_baseline": 0,
+    "disband": "stored date, or 2100-01-01 sentinel; listed even if scheduled",
+    "invalid_request": "reject and close the clan connection",
+    "revocation": "suppress result and close when main binding revoked during read"
+  },
+  "expected": {
+    "seed_ids": [
+      7100,
+      7101,
+      7102,
+      7103,
+      7104,
+      7105,
+      7106
+    ],
+    "point_page1": [
+      7106,
+      7105,
+      7104,
+      7103,
+      7102
+    ],
+    "point_page2": [
+      7101,
+      7100
+    ],
+    "refresh_page1": [
+      7106,
+      7105,
+      7104,
+      7103,
+      7102
+    ],
+    "refresh_recruiting": [
+      7105,
+      7103,
+      7101
+    ],
+    "point_recruiting": [
+      7105,
+      7103,
+      7101
+    ]
+  }
+}

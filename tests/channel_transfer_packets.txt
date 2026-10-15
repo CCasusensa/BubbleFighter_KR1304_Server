@@ -1,0 +1,21 @@
+# Manually fixed BFCLIENT02 wire fields. Payload only, little-endian scalars.
+# No credentials: C54 has a character DWORD and an unknown UI-derived DWORD.
+# direction|message|name|payload
+C|53|free|3c000000
+C|53|clan|46000000
+C|53|unknown|ffffffff
+C|54|character_ui_false|7856341200000000
+C|54|character_ui_true|7856341201000000
+C|54|preserve_bits|ffffffffffffffff
+C|55|acknowledgement|
+S|8|connect|00000000c000020134123c000000
+S|8|port_endianness|000000007f000001bc9a46000000
+S|8|unavailable|020000000000000000003c000000
+S|8|clan_required|0300000000000000000046000000
+S|8|preserve_bits|ffffffffffffffffffffffffffff
+S|9|switch_connection|
+S|10|close_old_connection|
+S|163|first_move|
+S|11|refused|000000003c00000000000000
+S|11|accepted|010000003c00000004030201
+S|11|nonzero_accepted|ffffffffffffffffffffffff

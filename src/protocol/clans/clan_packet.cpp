@@ -1,0 +1,114 @@
+#include "protocol/clans/clan_packet.h"
+
+#include <algorithm>
+#include <array>
+#include <stdexcept>
+#include <utility>
+
+#include "protocol/codec/packet_reader.h"
+#include "protocol/codec/packet_writer.h"
+
+namespace bubble_fighter::server::protocol {
+namespace {
+// Public static data at BFCLIENT02 VA 1891F28, selected through 189203C.
+// It is obfuscation data, not a credential. See clan_transport_ida.json.
+constexpr std::array<std::uint8_t, 256> kClanTable{
+    0x8a, 0x0c, 0x85, 0xf3, 0xcc, 0x82, 0x5f, 0xc1, 0x92, 0x56, 0x57, 0x6a,
+    0xaa, 0x03, 0xf0, 0xba, 0x70, 0xe7, 0x87, 0x7a, 0xbb, 0x38, 0x84, 0x9e,
+    0x4c, 0x18, 0x99, 0x78, 0x50, 0x4d, 0xc5, 0x5a, 0x0f, 0x95, 0x5b, 0xf2,
+    0x5a, 0x99, 0x34, 0xea, 0x49, 0x1a, 0xc4, 0x89, 0x64, 0xb5, 0xd3, 0xd7,
+    0x39, 0x72, 0xea, 0x18, 0x18, 0xed, 0x60, 0x06, 0x53, 0x51, 0xfd, 0xac,
+    0x56, 0x7a, 0x20, 0xd6, 0x65, 0x72, 0x63, 0xd2, 0xdb, 0x12, 0x35, 0x9c,
+    0xc0, 0x10, 0x52, 0xa9, 0xf7, 0x3d, 0x90, 0x57, 0xfb, 0xa8, 0x89, 0x4c,
+    0x55, 0x0a, 0x68, 0x43, 0x42, 0x92, 0x8f, 0x8b, 0xcb, 0x09, 0x41, 0x3e,
+    0x2d, 0xde, 0x87, 0x76, 0x4c, 0x93, 0x0c, 0xf8, 0x37, 0x11, 0x12, 0xb1,
+    0xd3, 0xec, 0xcc, 0x6e, 0xba, 0x21, 0x3f, 0xa2, 0x72, 0x2f, 0xd9, 0xc0,
+    0x7c, 0x4f, 0x92, 0x63, 0xe2, 0x85, 0x22, 0xcf, 0x4c, 0xcc, 0x17, 0x8f,
+    0x30, 0x38, 0x08, 0x30, 0x36, 0x2b, 0xfb, 0x5b, 0xea, 0x8d, 0x50, 0x66,
+    0x3c, 0xa4, 0xcc, 0x7a, 0x75, 0x70, 0x96, 0x7b, 0x29, 0xaf, 0x32, 0x59,
+    0xcf, 0x71, 0xda, 0xdc, 0xeb, 0xdf, 0x44, 0x29, 0x0b, 0x11, 0x9d, 0x8a,
+    0x06, 0x20, 0x6b, 0xb3, 0xb4, 0x5b, 0x06, 0x19, 0x0d, 0x34, 0x56, 0x05,
+    0xe2, 0xd8, 0xa1, 0x05, 0x37, 0x8e, 0x7a, 0xe4, 0x4b, 0x45, 0xa9, 0xca,
+    0xf8, 0x70, 0x24, 0x9f, 0x67, 0x1f, 0x61, 0xe2, 0xb4, 0xe4, 0xa0, 0x9d,
+    0x2a, 0x06, 0x7e, 0xf9, 0x7b, 0x02, 0x65, 0x4b, 0xc9, 0xe2, 0xa4, 0x01,
+    0xd3, 0x7b, 0xdc, 0xd1, 0x92, 0xe7, 0x70, 0x16, 0x24, 0x0b, 0xb3, 0xa3,
+    0xd2, 0xda, 0x8f, 0xaa, 0x95, 0x24, 0xbd, 0xcd, 0xca, 0x32, 0xec, 0x0b,
+    0x1a, 0x73, 0x64, 0xa5, 0x36, 0x81, 0xed, 0xab, 0xf5, 0x3a, 0xae, 0x40,
+    0xe5, 0x3a, 0xb4, 0x4b};
+
+void Transform(std::span<std::uint8_t> payload, std::uint16_t message_id) {
+  // 1114A80 uses unsigned division by 255, not truncation of the sum.
+  const auto seed = kClanTable[(payload.size() + message_id) % 255];
+  for (std::size_t i = 0; i < payload.size(); ++i)
+    payload[i] ^= static_cast<std::uint8_t>(seed + seed % (i + 1));
+}
+}  // namespace
+
+std::vector<std::uint8_t> ClanPacketCodec::Encode(const ClanPacket& packet) {
+  if (packet.payload.size() > kMaxPayloadSize)
+    throw std::invalid_argument("Clan packet payload exceeds native limit.");
+  PacketWriter writer;
+  writer.WriteUInt16(static_cast<std::uint16_t>(packet.payload.size()));
+  writer.WriteUInt16(packet.message_id);
+  auto bytes = writer.TakeBytes();
+  bytes.insert(bytes.end(), packet.payload.begin(), packet.payload.end());
+  Transform(std::span(bytes).subspan(kHeaderSize), packet.message_id);
+  return bytes;
+}
+ClanDecodeResult ClanPacketCodec::Decode(std::span<const std::uint8_t> bytes) {
+  ClanDecodeResult result;
+  if (bytes.size() < kHeaderSize) return result;
+  PacketReader reader(bytes.first(kHeaderSize));
+  const auto length = reader.ReadUInt16();
+  const auto id = reader.ReadUInt16();
+  result.frame_size = kHeaderSize + length;
+  if (length > kMaxPayloadSize) {
+    result.status = ClanDecodeStatus::kPayloadTooLarge;
+    return result;
+  }
+  if (bytes.size() < result.frame_size) return result;
+  const auto payload = bytes.subspan(kHeaderSize, length);
+  result.packet = {id, {payload.begin(), payload.end()}};
+  Transform(result.packet.payload, id);
+  result.status = ClanDecodeStatus::kComplete;
+  return result;
+}
+std::vector<ClanPacket> ClanStreamDecoder::Feed(
+    std::span<const std::uint8_t> bytes) {
+  if (failed_ || finished_)
+    throw std::runtime_error("Clan stream is no longer readable.");
+  std::vector<ClanPacket> packets;
+  try {
+    for (;;) {
+      auto result = ClanPacketCodec::Decode(buffer_);
+      if (result.status == ClanDecodeStatus::kPayloadTooLarge)
+        Fail("Clan packet payload exceeds native limit.");
+      if (result.status == ClanDecodeStatus::kComplete) {
+        packets.push_back(std::move(result.packet));
+        buffer_.clear();
+        continue;
+      }
+      if (bytes.empty()) return packets;
+      // Bound storage to one frame, checking its header before its payload.
+      const auto count =
+          std::min(result.frame_size - buffer_.size(), bytes.size());
+      buffer_.insert(buffer_.end(), bytes.begin(), bytes.begin() + count);
+      bytes = bytes.subspan(count);
+    }
+  } catch (...) {
+    failed_ = true;
+    buffer_.clear();
+    throw;
+  }
+}
+void ClanStreamDecoder::Finish() {
+  if (failed_) throw std::runtime_error("Clan stream is no longer readable.");
+  if (!buffer_.empty()) Fail("Clan connection ended with a truncated frame.");
+  finished_ = true;
+}
+void ClanStreamDecoder::Fail(const char* message) {
+  failed_ = true;
+  buffer_.clear();
+  throw std::runtime_error(message);
+}
+}  // namespace bubble_fighter::server::protocol

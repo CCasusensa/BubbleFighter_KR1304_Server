@@ -1,0 +1,33 @@
+{
+  "native_evidence": "BFCLIENT02 C53 writer56FB50; S8 consumer9A6440/error mapper945820; S11 consumer9A6D30; party clan counter90AB30; readiness8596E0; leave/disband UI5A9410/5BAC70",
+  "native_failures": {"unavailable": 2, "requires_clan": 3, "too_many_mercenaries": 4},
+  "project_policy": [
+    "Explicit [80] requires MinimumLevel, MaximumLevel and MaximumMercenaries0..3, plus configured authenticated clan service. No enabled80 by default.",
+    "Leader must have a current accepted ordinary clan membership100/101/102; training99 cannot anchor clan-channel admission. This training restriction is project policy.",
+    "Members without an accepted membership in that same clan count as mercenaries. Existing party capacity remains8; battle readiness2/4 is separate.",
+    "All account/character identities, enabled status and levels are reread together in one repeatable-read DB snapshot at preparation and final admission. No S201/self-report authority.",
+    "Release DB transaction before scene locks; retain shared clan-operations serialization across final admission/category publication. External SQL changes are handled by resident revalidation, not a claimed distributed transaction.",
+    "Public party admission within80 uses the same complete-group authority at its commit boundary.",
+    "Resident eligibility is refreshed after party-shape/server-clan changes and every10 monotonic seconds for external edits. An invalid group is marked revoked atomically and all its current main sessions close; no guessed forced-move protocol.",
+    "Trusted committed channel category, including the interval before every member adopts its scene, prevents ordinary/manual training leave and ordinary disband while in80. Entry/exit final commits publish that authority under the clan operation lock.",
+    "Category80 enters an isolated ordinary channel plaza through the existing project channel flow. Private clan plaza C2028/type6 and clan-battle matchmaking remain separate subsequent work."
+  ],
+  "fixed_cases": [
+    {"name":"solo_member","clans":[42],"roles":[100],"limit":1,"result":0},
+    {"name":"solo_master","clans":[42],"roles":[101],"limit":1,"result":0},
+    {"name":"solo_deputy","clans":[42],"roles":[102],"limit":1,"result":0},
+    {"name":"solo_absent","clans":[0],"roles":[0],"limit":1,"result":3},
+    {"name":"solo_pending","clans":[42],"roles":[1],"limit":1,"result":3},
+    {"name":"training_leader","clans":[99],"roles":[100],"limit":1,"result":3},
+    {"name":"same_clan","clans":[42,42,42,42],"roles":[101,102,100,100],"limit":0,"result":0},
+    {"name":"one_absent","clans":[42,0],"roles":[101,0],"limit":1,"result":0},
+    {"name":"one_other","clans":[42,43],"roles":[101,100],"limit":1,"result":0},
+    {"name":"one_pending","clans":[42,42],"roles":[101,1],"limit":1,"result":0},
+    {"name":"one_training","clans":[42,99],"roles":[101,100],"limit":1,"result":0},
+    {"name":"two_other_refused","clans":[42,43,44],"roles":[101,100,100],"limit":1,"result":4},
+    {"name":"no_mercenaries","clans":[42,0],"roles":[101,0],"limit":0,"result":4},
+    {"name":"three_mercenaries","clans":[42,43,0,99],"roles":[101,100,0,100],"limit":3,"result":0},
+    {"name":"four_mercenaries","clans":[42,43,0,99,44],"roles":[101,100,0,100,1],"limit":3,"result":4}
+  ],
+  "not_claimed": ["original server policy recovered", "original UI acceptance", "C2028 private clan plaza implemented", "clan battle gameplay complete"]
+}

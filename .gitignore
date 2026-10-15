@@ -1,0 +1,7 @@
+Artifacts/
+Local/
+.vs/
+*.log
+__pycache__/
+config/private/
+/tools/

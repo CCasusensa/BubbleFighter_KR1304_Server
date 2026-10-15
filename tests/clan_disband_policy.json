@@ -1,0 +1,11 @@
+{
+  "source": "Original wire fields and UI messages in clan_disband_ida.json; server rules below are project policy.",
+  "schedule": "Configured next-maintenance Unix timestamp, future and before 2100. No inferred calendar/default.",
+  "authority": "Trusted enabled current master101, ordinary clan not99, same available plaza epoch at commit.",
+  "cancel": "Only while stored deadline is in the future, independent of configured next maintenance.",
+  "duplicate": "Repeated same state refuses; does not extend deadlines.",
+  "maintenance": "Explicit offline --clan-maintenance command, no listeners. Database-scoped lock excludes running clan service and another maintenance command; all due ordinary clans deleted atomically with durable per-character notices. Limit 10000 clans per batch fails without writes.",
+  "recovery": "Canonical absent profile plus one -40 notification per clan connection; notices remain for reconnect until next membership/creation transaction clears them.",
+  "retention": "Creation receipts, accounts, characters, inventory preserved; only due clan and memberships deleted.",
+  "publication": "S1030(1,action),S1031(1,action),freshS1016 for requester; S1031 for other accepted members; pending applicants receive freshS1016 only."
+}

@@ -1,0 +1,125 @@
+{
+  "source": "IDA MCP BFCLIENT02 80DA80 / 5F5FF0 / D41593, 9B4100 native Function2 and Parameter1/2 branches. S1059A5C40 and formatter9A6100/15B3868. Independently encoded; no server implementation import.",
+  "cases": [
+    {
+      "label": "record-request",
+      "kind": "request",
+      "mid": 806,
+      "item_id": 100090,
+      "value_at4": 1,
+      "arguments": [],
+      "payload": "fa8601000100000000000000"
+    },
+    {
+      "label": "record-success",
+      "kind": "response",
+      "mid": 813,
+      "item_id": 100090,
+      "parameter": 1,
+      "result": 0,
+      "arguments": [],
+      "payload": "00000000fa86010000000000"
+    },
+    {
+      "label": "record-empty",
+      "kind": "response",
+      "mid": 813,
+      "item_id": 100090,
+      "parameter": 1,
+      "result": 9,
+      "arguments": [],
+      "payload": "09000000fa86010000000000"
+    },
+    {
+      "label": "record-failure",
+      "kind": "response",
+      "mid": 813,
+      "item_id": 100090,
+      "parameter": 1,
+      "result": 1,
+      "arguments": [],
+      "payload": "01000000fa86010000000000"
+    },
+    {
+      "label": "record-ignored",
+      "kind": "response",
+      "mid": 813,
+      "item_id": 100090,
+      "parameter": 1,
+      "result": 22,
+      "arguments": [],
+      "payload": "16000000fa86010000000000"
+    },
+    {
+      "label": "disconnect-request",
+      "kind": "request",
+      "mid": 806,
+      "item_id": 100091,
+      "value_at4": 1,
+      "arguments": [],
+      "payload": "fb8601000100000000000000"
+    },
+    {
+      "label": "disconnect-success",
+      "kind": "response",
+      "mid": 813,
+      "item_id": 100091,
+      "parameter": 2,
+      "result": 0,
+      "arguments": [],
+      "payload": "00000000fb86010000000000"
+    },
+    {
+      "label": "disconnect-empty",
+      "kind": "response",
+      "mid": 813,
+      "item_id": 100091,
+      "parameter": 2,
+      "result": 9,
+      "arguments": [],
+      "payload": "09000000fb86010000000000"
+    },
+    {
+      "label": "disconnect-failure",
+      "kind": "response",
+      "mid": 813,
+      "item_id": 100091,
+      "parameter": 2,
+      "result": 1,
+      "arguments": [],
+      "payload": "01000000fb86010000000000"
+    },
+    {
+      "label": "disconnect-ignored",
+      "kind": "response",
+      "mid": 813,
+      "item_id": 100091,
+      "parameter": 2,
+      "result": 22,
+      "arguments": [],
+      "payload": "16000000fb86010000000000"
+    }
+  ],
+  "profile_fields": [
+    {
+      "name": "wins",
+      "fighter_offset": 80,
+      "player_offset": 172
+    },
+    {
+      "name": "losses",
+      "fighter_offset": 84,
+      "player_offset": 176
+    },
+    {
+      "name": "draws",
+      "fighter_offset": 88,
+      "player_offset": 180
+    },
+    {
+      "name": "disconnects",
+      "fighter_offset": 40,
+      "player_offset": 196
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+join_empty 1106 -
+join_failed 1107 00000000
+join_negative 1107 ffffffff
+join_high_bit 1107 00000080
+join_training 1107 6300000064000000c8d628b88cc10000
+join_positive 1107 ffffff7f98badcfe346ce16c5cd56dad3dd880de0000
+leave_manual 1108 ecffffff
+leave_graduate 1108 c4ffffff
+leave_unknown 1108 78563412
+appearance_training 948 630000000000000031000000
+appearance_zero 948 000000000000000000000000
+appearance_upper 948 ffffffffff00000021436587
+graduate_empty 1515 -

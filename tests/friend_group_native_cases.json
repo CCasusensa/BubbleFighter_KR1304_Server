@@ -1,0 +1,172 @@
+{
+  "scope": "Synthetic SDK object/writer cases fixed independently before production implementation. No platform transport or original UI.",
+  "requests": [
+    {
+      "label": "create_0",
+      "action": "create",
+      "sdk_id": 16641,
+      "input_name": "",
+      "stored_name": "",
+      "writer_va": "0xf88900",
+      "expected_body": "000000000f22010001000000000000000001000000"
+    },
+    {
+      "label": "rename_1",
+      "action": "rename",
+      "sdk_id": 16643,
+      "input_name": "",
+      "stored_name": "",
+      "writer_va": "0xf890f0",
+      "expected_body": "00000000070000000001"
+    },
+    {
+      "label": "create_2",
+      "action": "create",
+      "sdk_id": 16641,
+      "input_name": "친구",
+      "stored_name": "친구",
+      "writer_va": "0xf88900",
+      "expected_body": "000000000f22010001000000085cce6cad0000000001000000"
+    },
+    {
+      "label": "rename_3",
+      "action": "rename",
+      "sdk_id": 16643,
+      "input_name": "친구",
+      "stored_name": "친구",
+      "writer_va": "0xf890f0",
+      "expected_body": "0000000007000000085cce6cad01"
+    },
+    {
+      "label": "create_4",
+      "action": "create",
+      "sdk_id": 16641,
+      "input_name": "队友😀",
+      "stored_name": "队友😀",
+      "writer_va": "0xf88900",
+      "expected_body": "000000000f22010001000000101f96cb533dd800de0000000001000000"
+    },
+    {
+      "label": "rename_5",
+      "action": "rename",
+      "sdk_id": 16643,
+      "input_name": "队友😀",
+      "stored_name": "队友😀",
+      "writer_va": "0xf890f0",
+      "expected_body": "0000000007000000101f96cb533dd800de01"
+    },
+    {
+      "label": "create_6",
+      "action": "create",
+      "sdk_id": 16641,
+      "input_name": "GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG",
+      "stored_name": "GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG",
+      "writer_va": "0xf88900",
+      "expected_body": "000000000f220100010000007c47004700470047004700470047004700470047004700470047004700470047004700470047004700470047004700470047004700470047004700470047000000000001000000"
+    },
+    {
+      "label": "rename_7",
+      "action": "rename",
+      "sdk_id": 16643,
+      "input_name": "GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG",
+      "stored_name": "GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG",
+      "writer_va": "0xf890f0",
+      "expected_body": "00000000070000007c470047004700470047004700470047004700470047004700470047004700470047004700470047004700470047004700470047004700470047004700470001"
+    },
+    {
+      "label": "create_8",
+      "action": "create",
+      "sdk_id": 16641,
+      "input_name": "GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG",
+      "stored_name": "GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG",
+      "writer_va": "0xf88900",
+      "expected_body": "000000000f220100010000007c47004700470047004700470047004700470047004700470047004700470047004700470047004700470047004700470047004700470047004700470047000000000001000000"
+    },
+    {
+      "label": "rename_9",
+      "action": "rename",
+      "sdk_id": 16643,
+      "input_name": "GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG",
+      "stored_name": "GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG",
+      "writer_va": "0xf890f0",
+      "expected_body": "00000000070000007c470047004700470047004700470047004700470047004700470047004700470047004700470047004700470047004700470047004700470047004700470001"
+    },
+    {
+      "label": "create_10",
+      "action": "create",
+      "sdk_id": 16641,
+      "input_name": "A\u0000B",
+      "stored_name": "A",
+      "writer_va": "0xf88900",
+      "expected_body": "000000000f220100010000000441000000000001000000"
+    },
+    {
+      "label": "rename_11",
+      "action": "rename",
+      "sdk_id": 16643,
+      "input_name": "A\u0000B",
+      "stored_name": "A",
+      "writer_va": "0xf890f0",
+      "expected_body": "000000000700000004410001"
+    },
+    {
+      "label": "assign",
+      "action": "assign",
+      "sdk_id": 16391,
+      "writer_va": "0xf87fa0",
+      "words": [
+        42,
+        0,
+        74255,
+        0,
+        74255,
+        0,
+        7
+      ],
+      "expected_body": "000000002a000000000000000f220100000000000f220100000000000700000000"
+    },
+    {
+      "label": "move",
+      "action": "move",
+      "sdk_id": 16393,
+      "writer_va": "0xf88430",
+      "words": [
+        42,
+        0,
+        74255,
+        0,
+        74255,
+        0,
+        7,
+        9
+      ],
+      "expected_body": "000000002a000000000000000f220100000000000f22010000000000070000000900000000"
+    },
+    {
+      "label": "delete_friend",
+      "action": "delete_friend",
+      "sdk_id": 16392,
+      "writer_va": "0xf87fa0",
+      "words": [
+        42,
+        0,
+        74255,
+        0,
+        74255,
+        0,
+        7
+      ],
+      "expected_body": "000000002a000000000000000f220100000000000f220100000000000700000000"
+    },
+    {
+      "label": "delete_group",
+      "action": "delete_group",
+      "sdk_id": 16642,
+      "writer_va": "0xf88cf0",
+      "words": [
+        7
+      ],
+      "expected_body": "000000000700000001"
+    }
+  ]
+}

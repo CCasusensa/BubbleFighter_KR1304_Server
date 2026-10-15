@@ -1,0 +1,42 @@
+{
+  "scope": "Ordinary clan recruitment, manual/automatic admission, cancellation, approval/rejection, leave/kick, deputy changes and native notifications; master-transfer consent/training clan remain separate.",
+  "trusted_source": "Actor account/character and target identity/name/old role reloaded under sorted character locks; per-clan row serializes membership counts and recruitment.",
+  "roles": {
+    "member": 100,
+    "master": 101,
+    "deputy": 102,
+    "pending": 1
+  },
+  "recruitment_modes": [
+    0,
+    1,
+    2
+  ],
+  "recruitment_authority": [
+    101,
+    102
+  ],
+  "disbanded": "No admission, promotion or recruitment changes; reject/cancel/leave cleanup allowed.",
+  "manual_admission": "C1032 only mode 1; persist pending; S1034 result1/current role1; S1035 to officers. Existing membership fails with trusted current status.",
+  "auto_admission": "C1033 mode2 plus exact trusted character name; persist role100 in one transaction; S1034 result1/current role100 then S1016 authoritative profile. Do not use result2: native text and side effects are training-specific. Existing accepted peers get fresh S1018/S1012, no invented old role.",
+  "pending_limit": 500,
+  "capacity": "Only accepted 100/101/102 count; enforce under clan lock before approve/auto join.",
+  "member_changes": {
+    "1->100": "101/102, recruiting nonzero, capacity and nondisbanding",
+    "1->-10": "101/102; allowed while stopped or disbanding",
+    "100->102": "101, unique deputy",
+    "102->100": "101",
+    "100->-30": "101/102",
+    "102->-30": "101",
+    "101 changes": "Refuse; never bypass native transfer consent"
+  },
+  "self_member_changes": "Refuse; use C1036 for ordinary leave. Master cannot leave through this request.",
+  "cancel": "C1063 matching own pending clan only; S1064 result1 and S1016 absent; S1065 to officers.",
+  "leave": "C1036 role100/102 only; S1037 old->negative20 then absent profile; same notification to other accepted members. Refused leave resynchronizes S1016.",
+  "change_reply": "S1040 result1 for committed change, 2 only capacity failure, negative102 deputy conflict; other failures result0. Target gets S1041 and current profile, approval first seeds the trusted previous pending profile for native cached pending-id use.",
+  "recruitment_reply": "S1103 result1/current mode on commit, result0 for refusal; others receive fresh S1018, officers get S1035 when stopped with pending applicants. Stop does not silently erase pending rows.",
+  "revocation": "Authority checked before transaction and at commit decision; rollback before commit, no events on failure.",
+  "notifications": "Serialize clan session operations and publish committed events in order to current connection generations; bounded inbox overflow closes that generation and reconnect reloads authoritative profile. Offline clients recover via profile, no durable history promised.",
+  "main_2025": "Strictly decode authenticated native state report; never adopt reported clan/role as authority and do not invent an acknowledgement.",
+  "schema": "New migration13 expands 0/1 recruitment to 0/1/2 while preserving old scripts and data."
+}

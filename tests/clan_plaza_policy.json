@@ -1,0 +1,26 @@
+{
+  "scope": "Server policy for C2028 private clan plaza; cached native UI is not authority.",
+  "max_party": 8,
+  "scene_capacity": 16,
+  "residency_seconds": 10,
+  "leader_only": true,
+  "canonical_name": "Read with every member in one repeatable-read snapshot; ignore the reported name.",
+  "unknown_wide80": 18446744073709551615,
+  "unknown_wide80_correction": "The initial draft used zero. Inspection of CreateMenuSnapshot and its documented native constructor113B7B0/113C3E0 baseline showed UINT64_MAX. Preserve that baseline; no clan ID semantics are assigned. Original codec fixtures stay unchanged.",
+  "cases": [
+    {"clans": [42], "roles": [100], "target": 42, "category": 60, "allowed": true},
+    {"clans": [42], "roles": [101], "target": 42, "category": 60, "allowed": true},
+    {"clans": [42], "roles": [102], "target": 42, "category": 60, "allowed": true},
+    {"clans": [42, 42, 42], "roles": [101, 100, 102], "target": 42, "category": 60, "allowed": true},
+    {"clans": [42, 0], "roles": [101, 0], "target": 42, "category": 60, "allowed": false},
+    {"clans": [42, 43], "roles": [101, 100], "target": 42, "category": 60, "allowed": false},
+    {"clans": [42, 42], "roles": [101, 1], "target": 42, "category": 60, "allowed": false},
+    {"clans": [42], "roles": [100], "target": 43, "category": 60, "allowed": false},
+    {"clans": [42], "roles": [100], "target": 0, "category": 60, "allowed": false},
+    {"clans": [99, 99], "roles": [100, 100], "target": 99, "category": 60, "allowed": true},
+    {"clans": [99], "roles": [101], "target": 99, "category": 60, "allowed": false},
+    {"clans": [99], "roles": [100], "target": 99, "category": 80, "allowed": false},
+    {"clans": [42, 42], "roles": [101, 100], "target": 42, "category": 80, "allowed": true}
+  ],
+  "limits": "Training99 support follows the cached UI gate and the existing trusted role100 schema, as explicit project policy. Category80 still requires an ordinary clan. Unavailable or inconsistent source fails closed. Invalid private residency revokes current whole-party sessions; no guessed forced-exit message. C2029 is not a reply. C2028 accepts menu/plaza/waiting-room sources, including mixed sources, with atomic waiting-room departure. Active-game and practice entry are refused."
+}

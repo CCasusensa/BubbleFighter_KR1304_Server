@@ -13,6 +13,10 @@ class MySqlCharacterStore final : public features::characters::CharacterStore {
   bool NameExists(std::u16string_view name) override;
   features::characters::CharacterCreateResult Create(
       features::characters::CharacterRecord& character) override;
+  // Local administration: replace one account's balances. Everything else in
+  // the row (name, look, level, experience, battle records) stays untouched.
+  bool SetCurrency(std::uint64_t account_id, std::uint32_t lucci,
+                   std::uint32_t cash);
 
  private:
   MySqlConnection connection_;

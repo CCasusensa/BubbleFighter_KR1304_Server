@@ -145,4 +145,19 @@ CharacterCreateResult MySqlCharacterStore::Create(CharacterRecord& character) {
   character.battle = {};
   return CharacterCreateResult::kCreated;
 }
+
+bool MySqlCharacterStore::SetCurrency(std::uint64_t account_id,
+                                      std::uint32_t lucci,
+                                      std::uint32_t cash) {
+  if (account_id == 0 ||
+      lucci > CharacterStatistics::kMaxValue ||
+      cash > CharacterStatistics::kMaxValue) {
+    throw std::invalid_argument("Unsupported currency values.");
+  }
+  Statement update(connection_.Handle(),
+                   "UPDATE Characters SET Lucci = ?, Cash = ? WHERE AccountId = ?");
+  std::array parameters{Number(lucci), Number(cash), Number(account_id)};
+  update.Execute(parameters);
+  return update.AffectedRows() == 1;
+}
 }  // namespace bubble_fighter::server::persistence

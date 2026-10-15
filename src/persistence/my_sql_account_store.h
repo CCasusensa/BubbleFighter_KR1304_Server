@@ -18,6 +18,11 @@ class MySqlAccountStore final : public features::authentication::AccountStore {
                  std::uint32_t lifetime_seconds) override;
   std::optional<std::uint64_t> ConsumeTicket(
       const features::authentication::CredentialDigest& digest) override;
+  // Local administration: replace one account's password verifier. The
+  // account keeps its id, characters and tickets.
+  bool SetPassword(
+      std::string_view normalized_username,
+      const features::authentication::PasswordVerifier& password);
 
  private:
   MySqlConnection connection_;

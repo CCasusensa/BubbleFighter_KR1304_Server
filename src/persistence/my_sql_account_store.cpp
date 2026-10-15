@@ -42,6 +42,26 @@ bool MySqlAccountStore::CreateAccount(std::string_view username,
   return statement.AffectedRows() == 1;
 }
 
+bool MySqlAccountStore::SetPassword(
+    std::string_view username, const PasswordVerifier& password) {
+  if (username.empty() || username.size() > 32) {
+    throw std::invalid_argument("Account username is invalid.");
+  }
+  Statement statement(
+      connection_.Handle(),
+      "UPDATE Accounts SET PasswordSalt = ?, PasswordHash = ?, PasswordIterations = ? WHERE Username = ? AND IsDisabled = 0");
+  std::array parameters{
+      Bytes(password.salt.data(),
+            static_cast<unsigned long>(password.salt.size())),
+      Bytes(password.hash.data(),
+            static_cast<unsigned long>(password.hash.size())),
+      Number(password.iterations),
+      Bytes(username.data(), static_cast<unsigned long>(username.size()),
+            MYSQL_TYPE_STRING)};
+  statement.Execute(parameters);
+  return statement.AffectedRows() == 1;
+}
+
 std::optional<StoredAccount> MySqlAccountStore::FindAccount(
     std::string_view username) {
   if (username.size() > 32) {

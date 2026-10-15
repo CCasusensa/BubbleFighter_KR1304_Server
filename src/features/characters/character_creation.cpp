@@ -6,10 +6,23 @@
 namespace bubble_fighter::server::features::characters {
 CharacterCreation::CharacterCreation(CharacterStore& store) : store_(store) {}
 
+std::size_t CharacterCreation::NameWidth(std::u16string_view name) {
+  std::size_t width = 0;
+  for (const auto value : name) {
+    width += (value >= 0x4E00 && value <= 0x9FFF) ? 2 : 1;
+  }
+  return width;
+}
+
 std::uint32_t CharacterCreation::ValidateName(std::u16string_view name) {
-  if (name.empty() || name.size() > kMaxNameCodeUnits) {
+  const auto width = NameWidth(name);
+  if (width < kMinNameWidth || width > kMaxNameWidth) {
     return 6;
   }
+  return ValidateCharacters(name);
+}
+
+std::uint32_t CharacterCreation::ValidateCharacters(std::u16string_view name) {
   // Preserve exact code units and case; no silent replacement/normalization.
   // Permit printable Unicode scalars, excluding controls, whitespace,
   // formatting characters and markup metacharacters in this local policy.

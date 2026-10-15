@@ -509,6 +509,7 @@ int RunAuthWireTests();
 int RunRemoteAuthTests();
 int RunAuthTransportTests();
 int RunAuthTransportTestServer(std::string_view, std::string_view);
+int RunCharacterNamePolicyTests();
 
 int main(int argc, char** argv) {
   try {
@@ -518,6 +519,7 @@ int main(int argc, char** argv) {
     checks += RunAuthTransportTests();
     checks += RunAuthWireTests();
     checks += RunRemoteAuthTests();
+    checks += RunCharacterNamePolicyTests();
     ProtocolTests();
     CommerceTests();
     ConfigurationTests();

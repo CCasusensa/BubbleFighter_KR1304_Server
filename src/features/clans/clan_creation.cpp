@@ -22,7 +22,7 @@ std::uint32_t ClanCreation::ValidateRequest(
     return 0xffffff9bU;
   if (!SupportsItem(request.item_id) || request.item_parameter != 30 ||
       request.value_after_name != 0 ||
-      characters::CharacterCreation::ValidateName(request.name))
+      characters::CharacterCreation::ValidateCharacters(request.name))
     return 0;
   // Plain text preserves UTF-16 code units. Spaces are allowed in
   // introductions; control/format/markup characters and malformed surrogate
@@ -31,7 +31,7 @@ std::uint32_t ClanCreation::ValidateRequest(
     const auto unit = request.introduction[i];
     const std::size_t count = unit >= 0xd800 && unit <= 0xdbff ? 2 : 1;
     if (unit != u' ' &&
-        characters::CharacterCreation::ValidateName(
+        characters::CharacterCreation::ValidateCharacters(
             std::u16string_view(request.introduction).substr(i, count)))
       return 0;
     i += count;

@@ -110,6 +110,7 @@ Apply only migrations that have not already run, in this order:
   create_cash_bundles.sql
   create_gift_bundles.sql
   add_battle_records.sql
+  expand_character_name_width.sql
 The scripts are in database/migrations; the program does not apply them.
 Start the configured server, replacing the example path and port:
   .\BubbleFighter.Server.exe --listen-port 40000 --database-config .\Database.ini

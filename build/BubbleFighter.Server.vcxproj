@@ -104,8 +104,8 @@
     <ClInclude Include="..\src\features\authentication\initial_handshake.h" />
     <ClCompile Include="..\src\features\authentication\login_profile.cpp" />
     <ClInclude Include="..\src\features\authentication\login_profile.h" />
-    <ClCompile Include="..\src\features\authentication\remote_auth.cpp" />
-    <ClInclude Include="..\src\features\authentication\remote_auth.h" />
+    <ClCompile Include="..\src\features\authentication\remote_auth.cpp" /><ClCompile Include="..\src\features\authentication\launcher_policy.cpp" />
+    <ClInclude Include="..\src\features\authentication\remote_auth.h" /><ClInclude Include="..\src\features\authentication\launcher_policy.h" />
     <ClCompile Include="..\src\features\battle\combat_damage.cpp" />
     <ClInclude Include="..\src\features\battle\combat_damage.h" />
     <ClCompile Include="..\src\features\battle\combat_geometry.cpp" />

@@ -393,6 +393,16 @@ int AuthTlsServer::Run(
     std::string_view certificate_thumbprint,
     const std::filesystem::path& database_configuration, std::stop_token stop,
     const std::function<void(std::uint16_t)>& on_listening) const {
+  return Run(port, listen_address, certificate_thumbprint,
+             database_configuration,
+             features::authentication::LauncherPolicy{}, stop, on_listening);
+}
+int AuthTlsServer::Run(
+    std::uint16_t port, std::string_view listen_address,
+    std::string_view certificate_thumbprint,
+    const std::filesystem::path& database_configuration,
+    features::authentication::LauncherPolicy policy, std::stop_token stop,
+    const std::function<void(std::uint16_t)>& on_listening) const {
   features::authentication::AttemptLimiter limiter;
   return Run(port, listen_address, certificate_thumbprint,
       RequestHandler{[&](const wire::AuthRequest& request, std::string_view peer) {
@@ -400,7 +410,7 @@ int AuthTlsServer::Run(
         try {
           persistence::MySqlAccountStore store(database_configuration);
           features::authentication::AccountAuthentication accounts(store);
-          return features::authentication::RemoteAuth(limiter).Handle(
+          return features::authentication::RemoteAuth(limiter, policy).Handle(
               request, accounts, peer, Clock::now());
         } catch (...) {
           return Failure(wire::ErrorCode::kUnavailable);

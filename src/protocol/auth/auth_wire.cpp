@@ -64,7 +64,10 @@ class Reader {
 };
 bool ValidAction(Action action) {
   return action == Action::kHealth || action == Action::kRegister ||
-         action == Action::kLogin;
+         action == Action::kLogin || action == Action::kPolicy;
+}
+bool carries_credentials(Action action) {
+  return action == Action::kRegister || action == Action::kLogin;
 }
 bool ValidError(ErrorCode error) {
   return error >= ErrorCode::kBadRequest && error <= ErrorCode::kUnavailable;
@@ -74,7 +77,7 @@ bool ValidError(ErrorCode error) {
 std::vector<std::uint8_t> EncodeRequest(const AuthRequest& request) {
   if (!ValidAction(request.action)) Invalid();
   std::vector<std::uint8_t> bytes{1, static_cast<std::uint8_t>(request.action)};
-  if (request.action != Action::kHealth) {
+  if (carries_credentials(request.action)) {
     Text(bytes, request.username);
     Text(bytes, request.password);
   } else if (!request.username.empty() || !request.password.empty()) Invalid();
@@ -85,7 +88,7 @@ AuthRequest DecodeRequest(std::span<const std::uint8_t> frame) {
   AuthRequest request;
   request.action = static_cast<Action>(reader.Read(1));
   if (!ValidAction(request.action)) Invalid();
-  if (request.action != Action::kHealth) {
+  if (carries_credentials(request.action)) {
     request.username = reader.Text();
     request.password = reader.Text();
   }
@@ -102,14 +105,48 @@ std::vector<std::uint8_t> EncodeResponse(const AuthResponse& response) {
     Text(bytes, response.message);
   } else if (response.status == Status::kOk) {
     if (!response.message.empty()) Invalid();
-    if (!response.username.empty() || !response.ticket.empty() || response.expires_at) {
+    if (response.policy) {
+      // Policy answers always carry both tables, empty ones included.
+      if (!response.username.empty() || !response.ticket.empty() ||
+          response.expires_at ||
+          response.modes.size() > kMaxPolicyModes ||
+          response.crazy_modes.size() > kMaxPolicyModes) Invalid();
+      Write(bytes, response.modes.size(), 2);
+      for (auto mode : response.modes) Write(bytes, mode, 2);
+      Write(bytes, response.crazy_modes.size(), 2);
+      for (auto mode : response.crazy_modes) Write(bytes, mode, 2);
+    } else if (!response.username.empty() || !response.ticket.empty() || response.expires_at) {
+      if (!response.modes.empty() || !response.crazy_modes.empty()) Invalid();
       if (response.username.empty() || response.ticket.empty() || !response.expires_at) Invalid();
       Text(bytes, response.username);
       Text(bytes, response.ticket);
       Write(bytes, response.expires_at, 8);
-    }
+    } else if (!response.modes.empty() || !response.crazy_modes.empty()) Invalid();
   } else Invalid();
   return Frame(std::move(bytes));
+}
+AuthResponse DecodePolicyResponse(std::span<const std::uint8_t> frame) {
+  Reader reader(frame);
+  AuthResponse response;
+  response.status = static_cast<Status>(reader.Read(1));
+  if (response.status == Status::kError) {
+    response.error = static_cast<ErrorCode>(reader.Read(2));
+    response.message = reader.Text();
+    if (!ValidError(response.error) || response.message.size() > 256) Invalid();
+    return response;
+  }
+  if (response.status != Status::kOk) Invalid();
+  response.policy = true;
+  const auto modes = static_cast<std::size_t>(reader.Read(2));
+  if (modes > kMaxPolicyModes) Invalid();
+  for (std::size_t index = 0; index < modes; ++index)
+    response.modes.push_back(static_cast<std::uint16_t>(reader.Read(2)));
+  const auto crazy = static_cast<std::size_t>(reader.Read(2));
+  if (crazy > kMaxPolicyModes) Invalid();
+  for (std::size_t index = 0; index < crazy; ++index)
+    response.crazy_modes.push_back(static_cast<std::uint16_t>(reader.Read(2)));
+  reader.Finish();
+  return response;
 }
 AuthResponse DecodeResponse(std::span<const std::uint8_t> frame) {
   Reader reader(frame);

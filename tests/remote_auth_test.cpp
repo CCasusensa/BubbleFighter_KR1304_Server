@@ -115,5 +115,20 @@ int RunRemoteAuthTests() {
   Require(!bounded.Allow("overflow", wire::Action::kLogin, now));
   Require(bounded.Allow("overflow", wire::Action::kLogin,
                         now + std::chrono::minutes(5)));
+  // Policy answers carry the operator tables and never touch the limiter.
+  auth::AttemptLimiter policy_limiter;
+  auth::LauncherPolicy configured;
+  configured.modes = {1, 8, 38};
+  configured.crazy_modes = {8};
+  auth::RemoteAuth policy_remote(policy_limiter, configured);
+  const auto policy_reply =
+      policy_remote.Handle({wire::Action::kPolicy}, accounts, "10.0.0.11", now);
+  Require(policy_reply.status == wire::Status::kOk && policy_reply.policy &&
+          policy_reply.modes == std::vector<std::uint16_t>({1, 8, 38}) &&
+          policy_reply.crazy_modes == std::vector<std::uint16_t>({8}));
+  const auto unconfigured =
+      remote.Handle({wire::Action::kPolicy}, accounts, "10.0.0.12", now);
+  Require(unconfigured.status == wire::Status::kOk && unconfigured.policy &&
+          unconfigured.modes.empty() && unconfigured.crazy_modes.empty());
   return 7;
 }

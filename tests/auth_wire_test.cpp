@@ -75,5 +75,27 @@ int RunAuthWireTests() {
   Require(rejected.error == error.error && rejected.message == error.message &&
           rejected.ticket.empty());
   Require(wire::DecodeResponse(wire::EncodeResponse({})).ticket.empty());
-  return static_cast<int>(frame.size()) + 15;
+
+  // Policy answers carry both tables, empty ones included, and a policy request
+  // never carries credentials.
+  wire::AuthResponse policy;
+  policy.policy = true;
+  policy.modes = {1, 3, 8};
+  policy.crazy_modes = {3};
+  const auto decoded_policy = wire::DecodePolicyResponse(wire::EncodeResponse(policy));
+  Require(decoded_policy.policy && decoded_policy.status == wire::Status::kOk &&
+          decoded_policy.modes == std::vector<std::uint16_t>({1, 3, 8}) &&
+          decoded_policy.crazy_modes == std::vector<std::uint16_t>({3}) &&
+          decoded_policy.username.empty() && decoded_policy.ticket.empty());
+  wire::AuthResponse empty_policy;
+  empty_policy.policy = true;
+  const auto decoded_empty =
+      wire::DecodePolicyResponse(wire::EncodeResponse(empty_policy));
+  Require(decoded_empty.policy && decoded_empty.modes.empty() &&
+          decoded_empty.crazy_modes.empty());
+  Require(wire::DecodeRequest(wire::EncodeRequest({wire::Action::kPolicy})).action ==
+          wire::Action::kPolicy);
+  Reject([] { wire::EncodeRequest({wire::Action::kPolicy, "abc", "def"}); });
+  Reject([&] { wire::DecodePolicyResponse(encoded); });
+  return static_cast<int>(frame.size()) + 24;
 }

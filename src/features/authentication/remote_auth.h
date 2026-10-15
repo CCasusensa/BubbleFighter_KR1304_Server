@@ -6,8 +6,10 @@
 #include <mutex>
 #include <string>
 #include <unordered_map>
+#include <utility>
 
 #include "features/authentication/account_authentication.h"
+#include "features/authentication/launcher_policy.h"
 #include "protocol/auth/auth_wire.h"
 
 namespace bubble_fighter::server::features::authentication {
@@ -32,13 +34,15 @@ class AttemptLimiter {
 
 class RemoteAuth {
  public:
-  explicit RemoteAuth(AttemptLimiter& limiter) : limiter_(limiter) {}
+  explicit RemoteAuth(AttemptLimiter& limiter, LauncherPolicy policy = {})
+      : limiter_(limiter), policy_(std::move(policy)) {}
   protocol::auth::AuthResponse Handle(
       const protocol::auth::AuthRequest& request, AccountAuthentication& accounts,
       std::string_view peer_ip, std::chrono::steady_clock::time_point now);
 
  private:
   AttemptLimiter& limiter_;
+  LauncherPolicy policy_;
 };
 }  // namespace bubble_fighter::server::features::authentication
 

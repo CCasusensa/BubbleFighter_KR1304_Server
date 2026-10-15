@@ -15,6 +15,7 @@
 
 #include "application/account_command.h"
 #include "features/authentication/account_authentication.h"
+#include "features/authentication/launcher_policy.h"
 #include "features/rooms/match_profile_updates.h"
 #include "features/shop/shop_catalog_response.h"
 #include "network/clan_tcp_server.h"
@@ -51,6 +52,7 @@ void PrintUsage() {
       << "Accounts: --create-account <username> --database-config <path>\n"
       << "Login: --login <username> --database-config <path> --ticket-file <new-path>\n"
       << "Optional channels: --channel-rules <path> enables isolated categories with explicit level limits.\n"
+      << "Optional launcher policy: --launcher-policy <path> hands build-a-room mode tables to launchers.\n"
       << "Optional clan service: --clan-port <0..65535> requires --database-config and the clan migration.\n"
       << "Optional TLS auth: --auth-port <1..65535> --auth-cert-thumbprint <SHA1> requires --database-config and a LocalMachine\\My certificate with private key.\n"
       << "Endpoint: --advertise-address <nonzero IPv4> is required for wildcard listen and is used for game handoffs.\n"
@@ -91,6 +93,7 @@ int ServerApplication::Run(int argc, char* argv[]) const {
   std::filesystem::path database_configuration;
   std::filesystem::path match_rules_path;
   std::filesystem::path channel_rules_path;
+  std::filesystem::path launcher_policy_path;
   for (int index = 1; index < argc; ++index) {
     const std::string_view argument(argv[index]);
     if (argument == "--clan-maintenance" && !maintenance_only) {
@@ -183,6 +186,9 @@ int ServerApplication::Run(int argc, char* argv[]) const {
     } else if (argument == "--channel-rules" && channel_rules_path.empty() &&
                index + 1 < argc) {
       channel_rules_path = argv[++index];
+    } else if (argument == "--launcher-policy" && launcher_policy_path.empty() &&
+               index + 1 < argc) {
+      launcher_policy_path = argv[++index];
     } else if (argument == "--once" && !once) {
       once = true;
     } else {
@@ -359,13 +365,19 @@ int ServerApplication::Run(int argc, char* argv[]) const {
       auto ready_future = ready.get_future();
       auth_worker = std::jthread(
           [auth_port, listen_address, auth_certificate, database_configuration,
+           launcher_policy_path,
            ready = std::move(ready), &service_stop,
            &auth_failure](std::stop_token stop) mutable {
             bool listening = false;
             try {
+              const auto policy =
+                  launcher_policy_path.empty()
+                      ? features::authentication::LauncherPolicy{}
+                      : features::authentication::LauncherPolicy::Load(
+                            launcher_policy_path);
               network::AuthTlsServer{}.Run(
                   static_cast<std::uint16_t>(auth_port), listen_address,
-                  auth_certificate, database_configuration, stop,
+                  auth_certificate, database_configuration, policy, stop,
                   [&](std::uint16_t) {
                     listening = true;
                     ready.set_value();

@@ -87,6 +87,14 @@ Response RemoteAuth::Handle(const protocol::auth::AuthRequest& request,
                             std::string_view peer_ip,
                             std::chrono::steady_clock::time_point now) {
   if (request.action == Action::kHealth) return {};
+  // Policy reads never consume the register/login budget.
+  if (request.action == Action::kPolicy) {
+    Response response;
+    response.policy = true;
+    response.modes = policy_.modes;
+    response.crazy_modes = policy_.crazy_modes;
+    return response;
+  }
   if (request.action != Action::kRegister && request.action != Action::kLogin)
     return Failure(Error::kUnsupported);
   if (!limiter_.Allow(peer_ip, request.action, now))

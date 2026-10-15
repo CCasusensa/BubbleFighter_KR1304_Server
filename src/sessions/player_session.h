@@ -124,7 +124,11 @@ class PlayerSession {
       features::clans::TrainingClanReconciler training = {},
       features::clans::ClanProfileSource party_clan = {},
       CashRefundHandler cash_refund = {}, GiftHandler gifts = {},
-      GiftCountSource gift_count = {});
+      GiftCountSource gift_count = {},
+      // Build-a-room modes this server hosts. It is the same list the launcher
+      // policy hands to the client, so a card is offered exactly when the room
+      // can be created. Empty keeps the strict policy (standard PvP only).
+      std::vector<std::uint16_t> playable_modes = {});
   std::vector<protocol::TcpPacket> Process(const protocol::TcpPacket& packet);
   // Called by the transport even when no packet arrives. Uses monotonic time.
   std::vector<protocol::TcpPacket> Poll();
@@ -262,6 +266,7 @@ class PlayerSession {
   features::parties::PartySceneConnection scene_connection_;
   std::shared_ptr<features::parties::PartyScenePrepared> scene_prepared_;
   features::channels::PartyChannelConnection channel_connection_;
+  std::vector<std::uint16_t> playable_modes_;
 };
 }  // namespace bubble_fighter::server::sessions
 

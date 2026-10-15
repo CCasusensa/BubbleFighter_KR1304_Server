@@ -529,10 +529,29 @@ int ServerApplication::Run(int argc, char* argv[]) const {
                   << "); using the pinned catalog." << std::endl;
       }
     }
+    // Build-a-room mode table: the same list the launcher policy hands to the
+    // client, so the card a player clicks and the room this server hosts cannot
+    // disagree. An unreadable policy leaves it empty and the strict default
+    // (standard PvP only) stays in force.
+    std::vector<std::uint16_t> playable_modes;
+    if (!launcher_policy_path.empty()) {
+      try {
+        playable_modes =
+            features::authentication::LauncherPolicy::Load(launcher_policy_path)
+                .modes;
+      } catch (...) {
+        playable_modes.clear();
+      }
+      std::cout << "Build-a-room modes: " << playable_modes.size() << " from "
+                << launcher_policy_path.string();
+      if (playable_modes.empty()) std::cout << " (strict: standard PvP only)";
+      std::cout << std::endl;
+    }
     const auto create_handler =
         [database_configuration, idle_timeout_seconds, rooms, rules, plazas,
          social, invitations, parties, scene_transfers, channels, handoffs,
-         clan_authentication, shop_list]() -> network::ConnectionHandlers {
+         clan_authentication, shop_list,
+         playable_modes]() -> network::ConnectionHandlers {
       sessions::PlayerSession::TicketConsumer consume;
       if (!database_configuration.empty()) {
         consume = [database_configuration](std::string_view ticket) {
@@ -686,7 +705,7 @@ int ServerApplication::Run(int argc, char* argv[]) const {
             return result.graduated;
           },
           std::move(party_clan), std::move(cash_refund), std::move(gifts),
-          std::move(gift_count));
+          std::move(gift_count), playable_modes);
       network::ConnectionHandlers handlers;
       handlers.on_packet = [owned_session,
                             rules](const protocol::TcpPacket& packet) {

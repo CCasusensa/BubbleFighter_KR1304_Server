@@ -69,7 +69,7 @@ PlayerSession::PlayerSession(
     features::clans::TrainingClanReconciler training,
     features::clans::ClanProfileSource party_clan,
     CashRefundHandler cash_refund, GiftHandler gifts,
-    GiftCountSource gift_count)
+    GiftCountSource gift_count, std::vector<std::uint16_t> playable_modes)
     : clan_authentication_(std::move(clan_authentication)),
       clan_confirmation_(std::move(clan_confirmation)),
       training_(std::move(training)),
@@ -94,7 +94,8 @@ PlayerSession::PlayerSession(
       social_(std::move(social)),
       invitations_(std::move(invitations)),
       parties_(std::move(parties)),
-      scene_transfers_(std::move(scene_transfers)) {
+      scene_transfers_(std::move(scene_transfers)),
+      playable_modes_(std::move(playable_modes)) {
   if (!practice_clock_ || !practice_seed_) {
     throw std::invalid_argument(
         "Missing practice clock or random seed source.");

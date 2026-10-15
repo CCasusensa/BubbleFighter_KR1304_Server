@@ -101,7 +101,16 @@ std::optional<std::vector<protocol::TcpPacket>> PlayerSession::ProcessRoom(
       BeginSceneChange();
       auto [observedAt, data] = load();
       (void)observedAt;
-      RoomCreationPolicy policy{{RoomCreation::kStandardPvpMode},
+      // The hosted modes are the launcher policy's own list, so the card the
+      // client offers and the room this server accepts cannot disagree. Large
+      // room modes are dropped because the 36-slot shape is not hosted, and an
+      // empty list keeps the original strict policy.
+      std::vector<std::uint16_t> playable;
+      for (const auto mode : playable_modes_) {
+        if (!RoomCreation::IsLargeRoomMode(mode)) playable.push_back(mode);
+      }
+      if (playable.empty()) playable.push_back(RoomCreation::kStandardPvpMode);
+      RoomCreationPolicy policy{std::move(playable),
                                 {0},
                                 RoomCreation::kDialogTitleCodeUnits,
                                 RoomCreation::kDialogPasswordCodeUnits};

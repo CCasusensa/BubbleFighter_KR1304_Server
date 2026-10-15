@@ -353,7 +353,7 @@ GiftResult PrepareGiftAction(const characters::CharacterRecord& owner,
           constexpr bool sender = std::is_same_v<T, GiftDeleteSentRequest> ||
                                   std::is_same_v<T, GiftViewThanksRequest>;
           const auto found =
-              std::find_if(gifts.begin(), gifts.end(), [&](const auto& row) {
+              std::find_if(gifts.begin(), gifts.end(), [&, sender = sender](const auto& row) {
                 return row.gift_id == action.gift_id &&
                        (sender ? row.sender_id == owner.character_id &&
                                      !row.sender_hidden

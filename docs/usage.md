@@ -2,7 +2,7 @@
 
 先完成[构建与数据库准备](build.md)。以下 PowerShell 命令在仓库根目录执行；`Local/Database.ini`、账号 `player01`、监听端口 `40000` 均为示例，需要按自己的环境配置。
 
-命令与默认值依据 [ServerApplication.cpp](../src/application/server_application.cpp) 和 [LocalAccountCommand.cpp](../src/application/local_account_command.cpp)。
+命令与默认值依据 [ServerApplication.cpp](../src/application/server_application.cpp) 和 [account_command.cpp](../src/application/account_command.cpp)。
 
 ## 查看帮助
 

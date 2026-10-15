@@ -41,7 +41,7 @@ void Authority() {
     std::uint32_t target, category;
     bool allowed;
   };
-  // Independently fixed in clan_plaza_policy.json before the business code.
+  // Policy cases were independently fixed before the business code.
   const std::vector<Case> cases{{{42}, {100}, 42, 60, true},
                                 {{42}, {101}, 42, 60, true},
                                 {{42}, {102}, 42, 60, true},

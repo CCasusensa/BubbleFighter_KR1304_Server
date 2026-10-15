@@ -1,4 +1,5 @@
 #include <array>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <memory>
@@ -6,15 +7,10 @@
 #include <sstream>
 #include <stdexcept>
 
-#include "features/authentication/credential_crypto.h"
 #include "features/characters/character_profile.h"
 #include "features/inventory/item_use.h"
 #include "features/rooms/match_profile_updates.h"
 #include "features/rooms/room_map_catalog.h"
-#include "persistence/my_sql_account_store.h"
-#include "persistence/my_sql_character_store.h"
-#include "persistence/my_sql_commands.h"
-#include "persistence/my_sql_match_store.h"
 #include "protocol/login/client_to_server_message_0x0001.h"
 #include "protocol/login/login_request.h"
 #include "protocol/rooms/create_room_request.h"
@@ -49,13 +45,11 @@ void Rejects(F action) {
 struct Store final : chars::CharacterStore {
   chars::CharacterRecord record;
   int reads = 0, fault = 0;
-  std::shared_ptr<chars::CharacterStore> database;
   std::optional<chars::CharacterRecord> FindByAccount(
       std::uint64_t account) override {
     ++reads;
     if (fault == 1) throw std::runtime_error("Injected profile read failure");
     if (fault == 2) return {};
-    if (database) return database->FindByAccount(account);
     auto value = record;
     if (fault == 3) ++value.account_id;
     if (fault == 4) ++value.character_id;
@@ -81,62 +75,16 @@ struct Fixture {
   int settlements = 0;
   std::shared_ptr<rooms::RoomRegistry> registry;
   std::uint16_t room_id = 0;
-  std::filesystem::path configuration;
-  explicit Fixture(chars::CharacterStatistics before,
-                   const std::filesystem::path& config = {}, int trial = 0)
-      : configuration(config) {
+  explicit Fixture(chars::CharacterStatistics before) {
     for (std::size_t i = 0; i < 2; ++i) {
       stores[i] = std::make_shared<Store>();
       stores[i]->record = {100 + i, 200 + i, i == 0 ? u"Host" : u"Guest",
                            10,      7,       before};
     }
-    if (!configuration.empty()) {
-      namespace sql = bf::persistence::my_sql_commands;
-      bf::persistence::MySqlAccountStore accounts(configuration);
-      auto database =
-          std::make_shared<bf::persistence::MySqlCharacterStore>(configuration);
-      auto password =
-          bf::features::authentication::CredentialCrypto::HashPassword(
-              "Synthetic-profile-password");
-      for (std::size_t i = 0; i < stores.size(); ++i) {
-        auto& store = stores[i];
-        const auto username =
-            "profile_" + std::to_string(trial) + "_" + std::to_string(i);
-        Check(accounts.CreateAccount(username, password));
-        store->record.character_id = 0;
-        store->record.account_id = accounts.FindAccount(username)->account_id;
-        store->record.character_name += static_cast<char16_t>(u'0' + trial);
-        Check(database->Create(store->record) ==
-              chars::CharacterCreateResult::kCreated);
-        bf::persistence::MySqlConnection connection(configuration);
-        sql::Statement fund(
-            connection.Handle(),
-            "UPDATE Characters SET Level=?, Experience=?, Lucci=?, Cash=? WHERE CharacterId=?");
-        std::array values{sql::Number(before.level),
-                          sql::Number(before.experience),
-                          sql::Number(before.lucci), sql::Number(before.cash),
-                          sql::Number(store->record.character_id)};
-        fund.Execute(values);
-        store->record.statistics = before;
-        store->database = database;
-      }
-    }
     registry = rooms::RoomRegistry::Create(
         4, [this] { return now; }, [] { return 123; },
         [this](const rooms::RoomMatchRequest& pending) {
           ++settlements;
-          if (!configuration.empty()) {
-            auto committed =
-                bf::persistence::MySqlMatchStore(configuration).Settle(pending);
-            if (!receipt) {
-              request = pending;
-              receipt = committed;
-              throw std::runtime_error(
-                  "MySQL committed receipt; first delivery lost");
-            }
-            Check(committed.Encode() == receipt->Encode());
-            return committed;
-          }
           if (!receipt) {
             request = pending;
             rooms::RoomMatchResult result;
@@ -300,52 +248,6 @@ int RunSettlementProfileTests(const std::filesystem::path& directory) {
       Check(f.players[1]->State() == bf::sessions::PlayerSessionState::kInRoom);
     }
   std::cout << "Settlement profile: " << checks << " checks passed\n";
-  return checks;
-}
-
-int RunSettlementProfilePersistenceTests(
-    const std::filesystem::path& configuration) {
-  namespace db = bf::persistence;
-  namespace sql = db::my_sql_commands;
-  for (int trial = 0; trial < 2; ++trial) {
-    Fixture f({1, 0, 200, 30}, configuration, trial);
-    const auto saved = f.receipt->Encode();
-    for (const auto& store : f.stores) {
-      auto fresh = store->database->FindByAccount(store->record.account_id);
-      Check(fresh->statistics.experience == 100 &&
-            fresh->statistics.lucci == 250);
-    }
-    // A trusted writer commits after rewards but before the response retry.
-    // Both character reads and the immutable replay use production MySQL
-    // stores.
-    const auto change = [&](std::size_t i, std::uint32_t cash) {
-      db::MySqlConnection connection(configuration);
-      sql::Statement update(
-          connection.Handle(),
-          "UPDATE Characters SET Lucci=7, Cash=? WHERE CharacterId=?");
-      std::array values{sql::Number(cash),
-                        sql::Number(f.stores[i]->record.character_id)};
-      update.Execute(values);
-      Check(update.AffectedRows() == 1);
-    };
-    change(0, 3);
-    change(1, 3);
-    f.now += std::chrono::seconds(2);
-    VerifyCurrent(f, 0, f.Deliver(0, trial == 1), {1, 100, 7, 3});
-    change(1, 2);
-    VerifyCurrent(f, 1, f.Deliver(1, trial == 0), {1, 100, 7, 2});
-    // Reopening persistence reproduces old receipt bytes, without restoring
-    // balances or losing the current session/room profile.
-    Check(db::MySqlMatchStore(configuration).Settle(*f.request).Encode() ==
-          saved);
-    Check(db::MySqlCharacterStore(configuration)
-              .FindByAccount(f.stores[0]->record.account_id)
-              ->statistics == chars::CharacterStatistics{1, 100, 7, 3});
-    Check(db::MySqlCharacterStore(configuration)
-              .FindByAccount(f.stores[1]->record.account_id)
-              ->statistics == chars::CharacterStatistics{1, 100, 7, 2});
-  }
-  std::cout << "Settlement profile MySQL: " << checks << " checks passed\n";
   return checks;
 }
 

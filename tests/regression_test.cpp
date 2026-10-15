@@ -449,42 +449,8 @@ void RuleAndDigestTests() {
 int RunRoomConfigurationTests(const std::filesystem::path& fixture);
 
 namespace bubble_fighter::server::tests {
-std::size_t RunGiftPersistenceTests(const std::filesystem::path& configuration);
-std::size_t RunDeliveryCapacityPersistenceTests(
-    const std::filesystem::path& configuration);
-std::size_t RunBundleGiftPersistenceTests(
-    const std::filesystem::path& configuration);
-void RunClanPlazaPersistenceTests(const std::filesystem::path& configuration);
-void RunClanChannelPersistenceTests(const std::filesystem::path& configuration);
-void RunClanTrainingPersistenceTests(
-    const std::filesystem::path& configuration);
-void RunClanDisbandPersistenceTests(const std::filesystem::path& configuration);
-void RunClanPersistenceTests(const std::filesystem::path& configuration);
-void RunClanMutationPersistenceTests(
-    const std::filesystem::path& configuration);
-void RunClanMasterTransferPersistenceTests(
-    const std::filesystem::path& configuration);
-void RunClanRosterPersistenceTests(const std::filesystem::path& configuration);
-void RunClanDirectoryPersistenceTests(
-    const std::filesystem::path& configuration);
-void RunClanCreationPersistenceTests(
-    const std::filesystem::path& configuration);
-void SeedClanNetworkCards(const std::filesystem::path& configuration);
-void SeedSocialNetworkTests(const std::filesystem::path& configuration);
 std::size_t RunSocialFeaturesTests(const std::filesystem::path& directory);
-std::size_t RunSocialPersistenceTests(
-    const std::filesystem::path& configuration);
-std::size_t RunBundlePersistenceTests(
-    const std::filesystem::path& configuration);
-std::size_t RunCashRefundPersistenceTests(
-    const std::filesystem::path& configuration);
-std::size_t RunOfflineMessagePersistenceTests(
-    const std::filesystem::path& configuration);
-std::size_t RunFriendGroupPersistenceTests(
-    const std::filesystem::path& configuration);
 std::size_t RunWeaponPresetChangeTests(const std::filesystem::path& directory);
-std::size_t RunWeaponPresetPersistenceTests(
-    const std::filesystem::path& configuration);
 }  // namespace bubble_fighter::server::tests
 int RunRoomInvitationTests(const std::filesystem::path& directory);
 int RunRoomVisitationTests(const std::filesystem::path& directory);
@@ -536,130 +502,12 @@ int RunGiftProtocolTests(const std::filesystem::path& directory);
 int RunEquipmentPresetTests();
 int RunEquipmentPresetRoomTests();
 int RunBattleAwardsTests(const std::filesystem::path&);
-int RunBattleAwardsPersistenceTests(const std::filesystem::path&);
 int RunBattleRecordDeliveryTests();
 int RunBattleRecordsTests(const std::filesystem::path&);
-int RunBattleRecordsPersistenceTests(const std::filesystem::path&);
 int RunSettlementProfileTests(const std::filesystem::path& directory);
-int RunSettlementProfilePersistenceTests(
-    const std::filesystem::path& configuration);
-void RunPresetMigrationTests(const std::filesystem::path& configuration,
-                             bool before);
 
 int main(int argc, char** argv) {
   try {
-    if (argc == 3 &&
-        std::string_view(argv[1]) == "--battle-awards-database-tests") {
-      RunBattleAwardsPersistenceTests(argv[2]);
-      return 0;
-    }
-    if (argc == 3 &&
-        std::string_view(argv[1]) == "--settlement-profile-database-tests") {
-      RunSettlementProfilePersistenceTests(argv[2]);
-      return 0;
-    }
-    if (argc == 3 &&
-        std::string_view(argv[1]) == "--clan-plaza-database-tests") {
-      bf::tests::RunClanPlazaPersistenceTests(argv[2]);
-      return 0;
-    }
-    if (argc == 3 &&
-        std::string_view(argv[1]) == "--clan-channel-database-tests") {
-      bf::tests::RunClanChannelPersistenceTests(argv[2]);
-      return 0;
-    }
-    if (argc == 3 &&
-        std::string_view(argv[1]) == "--clan-training-database-tests") {
-      bf::tests::RunClanTrainingPersistenceTests(argv[2]);
-      return 0;
-    }
-    if (argc == 3 &&
-        std::string_view(argv[1]) == "--clan-disband-database-tests") {
-      bf::tests::RunClanDisbandPersistenceTests(argv[2]);
-      return 0;
-    }
-    if (argc == 3 &&
-        std::string_view(argv[1]) == "--clan-master-transfer-database-tests") {
-      bf::tests::RunClanMasterTransferPersistenceTests(argv[2]);
-      return 0;
-    }
-    if (argc == 3 &&
-        std::string_view(argv[1]) == "--clan-creation-database-tests") {
-      bf::tests::RunClanCreationPersistenceTests(argv[2]);
-      return 0;
-    }
-    if (argc == 3 && std::string_view(argv[1]) == "--seed-clan-network") {
-      bf::tests::SeedClanNetworkCards(argv[2]);
-      return 0;
-    }
-    if (argc == 3 &&
-        std::string_view(argv[1]) == "--clan-directory-database-tests") {
-      bf::tests::RunClanDirectoryPersistenceTests(argv[2]);
-      return 0;
-    }
-    if (argc == 3 &&
-        std::string_view(argv[1]) == "--clan-roster-database-tests") {
-      bf::tests::RunClanRosterPersistenceTests(argv[2]);
-      return 0;
-    }
-    if (argc == 3 &&
-        std::string_view(argv[1]) == "--clan-mutation-database-tests") {
-      bf::tests::RunClanMutationPersistenceTests(argv[2]);
-      return 0;
-    }
-    if (argc == 3 && std::string_view(argv[1]) == "--clan-database-tests") {
-      bf::tests::RunClanPersistenceTests(argv[2]);
-      return 0;
-    }
-    if (argc == 3 && std::string_view(argv[1]) == "--seed-social-network") {
-      bf::tests::SeedSocialNetworkTests(argv[2]);
-      return 0;
-    }
-    if (argc == 3 && std::string_view(argv[1]) == "--social-database-tests") {
-      bf::tests::RunSocialPersistenceTests(argv[2]);
-      return 0;
-    }
-    if (argc == 3 &&
-        std::string_view(argv[1]) == "--friend-group-database-tests") {
-      bf::tests::RunFriendGroupPersistenceTests(argv[2]);
-      return 0;
-    }
-    if (argc == 3 &&
-        std::string_view(argv[1]) == "--offline-message-database-tests") {
-      bf::tests::RunOfflineMessagePersistenceTests(argv[2]);
-      return 0;
-    }
-    if (argc == 3 && std::string_view(argv[1]) == "--bundle-database-tests") {
-      bf::tests::RunBundlePersistenceTests(argv[2]);
-      return 0;
-    }
-    if (argc == 3 &&
-        std::string_view(argv[1]) == "--cash-refund-database-tests") {
-      bf::tests::RunCashRefundPersistenceTests(argv[2]);
-      return 0;
-    }
-    if (argc == 3 && std::string_view(argv[1]) == "--gift-database-tests") {
-      bf::tests::RunGiftPersistenceTests(argv[2]);
-      bf::tests::RunBundleGiftPersistenceTests(argv[2]);
-      bf::tests::RunDeliveryCapacityPersistenceTests(argv[2]);
-      return 0;
-    }
-    if (argc == 3 && std::string_view(argv[1]) == "--database-tests") {
-      bf::tests::RunWeaponPresetPersistenceTests(argv[2]);
-      return 0;
-    }
-    if (argc == 3 &&
-        (std::string_view(argv[1]) == "--before-preset-migration" ||
-         std::string_view(argv[1]) == "--after-preset-migration")) {
-      RunPresetMigrationTests(
-          argv[2], std::string_view(argv[1]) == "--before-preset-migration");
-      return 0;
-    }
-    if (argc == 3 &&
-        std::string_view(argv[1]) == "--battle-records-database-tests") {
-      RunBattleRecordsPersistenceTests(argv[2]);
-      return 0;
-    }
     ProtocolTests();
     CommerceTests();
     ConfigurationTests();

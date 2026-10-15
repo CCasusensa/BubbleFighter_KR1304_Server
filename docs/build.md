@@ -58,7 +58,7 @@ msbuild .\BubbleFighter.Server.sln /m /p:Configuration=Release /p:Platform=x64 "
 
 | 顺序 | 文件 | 作用 |
 | --- | --- | --- |
-| 1 | [CreateLocalAccounts.sql](../src/persistence/migrations/create_local_accounts.sql) | `Accounts`、`LoginTickets` |
+| 1 | [create_accounts.sql](../src/persistence/migrations/create_accounts.sql) | `Accounts`、`LoginTickets` |
 | 2 | [CreateCharacters.sql](../src/persistence/migrations/create_characters.sql) | `Characters` |
 | 3 | [AddCharacterStatistics.sql](../src/persistence/migrations/add_character_statistics.sql) | 角色等级、经验、Lucci、Cash 字段 |
 | 4 | [CreateInventorySlots.sql](../src/persistence/migrations/create_inventory_slots.sql) | `InventorySlots` |

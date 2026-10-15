@@ -505,9 +505,19 @@ int RunBattleAwardsTests(const std::filesystem::path&);
 int RunBattleRecordDeliveryTests();
 int RunBattleRecordsTests(const std::filesystem::path&);
 int RunSettlementProfileTests(const std::filesystem::path& directory);
+int RunAuthWireTests();
+int RunRemoteAuthTests();
+int RunAuthTransportTests();
+int RunAuthTransportTestServer(std::string_view, std::string_view);
 
 int main(int argc, char** argv) {
   try {
+    if (argc == 4 && std::string_view(argv[1]) == "--auth-transport-test") {
+      return RunAuthTransportTestServer(argv[2], argv[3]);
+    }
+    checks += RunAuthTransportTests();
+    checks += RunAuthWireTests();
+    checks += RunRemoteAuthTests();
     ProtocolTests();
     CommerceTests();
     ConfigurationTests();

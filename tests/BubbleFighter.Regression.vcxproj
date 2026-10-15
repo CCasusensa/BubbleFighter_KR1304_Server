@@ -12,9 +12,14 @@
   <PropertyGroup><OutDir>$(MSBuildThisFileDirectory)..\Artifacts\Tests\$(Platform)\$(Configuration)\</OutDir><IntDir>$(MSBuildThisFileDirectory)..\Artifacts\Obj\$(Platform)\$(Configuration)\Regression\</IntDir></PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile><LanguageStandard>stdcpp20</LanguageStandard><CompileAs>CompileAsCpp</CompileAs><AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions><AdditionalIncludeDirectories>$(MSBuildThisFileDirectory)..\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories><ExceptionHandling>Sync</ExceptionHandling><MultiProcessorCompilation>true</MultiProcessorCompilation><WarningLevel>Level4</WarningLevel></ClCompile>
-    <Link><AdditionalDependencies>Bcrypt.lib;Ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies></Link>
+    <Link><AdditionalDependencies>Bcrypt.lib;Ws2_32.lib;Secur32.lib;Crypt32.lib;Ncrypt.lib;Advapi32.lib;%(AdditionalDependencies)</AdditionalDependencies></Link>
   </ItemDefinitionGroup>
   <ItemGroup><ClCompile Include="regression_test.cpp" /><ClCompile Include="settlement_profile_test.cpp" /><ClCompile Include="battle_records_test.cpp" /><ClCompile Include="battle_awards_test.cpp" /><ClCompile Include="channel_transfer_test.cpp" /><ClCompile Include="connection_handoff_test.cpp" /><ClCompile Include="channel_worlds_test.cpp" /><ClCompile Include="party_channel_test.cpp" /><ClCompile Include="clan_transport_test.cpp" /><ClCompile Include="clan_profile_test.cpp" /><ClCompile Include="clan_membership_test.cpp" /><ClCompile Include="clan_roster_test.cpp" /><ClCompile Include="clan_directory_test.cpp" /><ClCompile Include="clan_roster_query_test.cpp" /><ClCompile Include="clan_mutation_test.cpp" /><ClCompile Include="clan_master_transfer_codec_test.cpp" /><ClCompile Include="clan_master_transfer_test.cpp" /><ClCompile Include="clan_training_test.cpp" /><ClCompile Include="clan_presence_test.cpp" /><ClCompile Include="party_clan_identity_test.cpp" /><ClCompile Include="clan_channel_test.cpp" /><ClCompile Include="clan_plaza_protocol_test.cpp" /><ClCompile Include="clan_plaza_test.cpp" /><ClCompile Include="clan_plaza_session_test.cpp" /><ClCompile Include="clan_disband_test.cpp" /><ClCompile Include="clan_authentication_test.cpp" /><ClCompile Include="clan_creation_test.cpp" /><ClCompile Include="social_features_test.cpp" /><ClCompile Include="social_session_test.cpp" /><ClCompile Include="friend_group_protocol_test.cpp" /><ClCompile Include="friend_group_service_test.cpp" /><ClCompile Include="offline_message_protocol_test.cpp" />
+    <ClCompile Include="auth_wire_test.cpp" />
+    <ClCompile Include="remote_auth_test.cpp" />
+    <ClCompile Include="auth_transport_test.cpp" />
+    <ClCompile Include="..\src\network\auth_tls_server.cpp" />
+    <ClCompile Include="..\src\network\tcp_server.cpp" />
     <ClCompile Include="cash_refund_protocol_test.cpp" />
     <ClCompile Include="gift_protocol_test.cpp" />
     <ClCompile Include="gift_service_test.cpp" />

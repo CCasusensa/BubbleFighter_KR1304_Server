@@ -92,6 +92,30 @@
     }
   ],
   "added_literals": [
+    "\"--advertise-address\"",
+    "\"--auth-cert-thumbprint\"",
+    "\"--auth-port\"",
+    "\".\"",
+    "\"Account already exists.\"",
+    "\"Advertise address must be nonzero IPv4.\"",
+    "\"Advertise address must be nonzero IPv4.\\n\"",
+    "\"Auth TLS listening on \"",
+    "\"Auth TLS transport failed.\"",
+    "\"Auth service requires a database, certificate and distinct nonzero port.\\n\"",
+    "\"Authentication failed.\"",
+    "\"Endpoint: --advertise-address <nonzero IPv4> is required for wildcard listen and is used for game handoffs.\\n\"",
+    "\"Invalid account password.\"",
+    "\"Invalid account request.\"",
+    "\"Invalid auth TLS certificate or private key.\"",
+    "\"Invalid auth listener configuration.\"",
+    "\"Invalid auth port.\\n\"",
+    "\"Invalid auth request frame.\"",
+    "\"Invalid authentication frame.\"",
+    "\"Optional TLS auth: --auth-port <1..65535> --auth-cert-thumbprint <SHA1> requires --database-config and a LocalMachine\\\\My certificate with private key.\\n\"",
+    "\"Too many attempts. Try again later.\"",
+    "\"Wildcard listen requires an explicit --advertise-address.\"",
+    "'F'",
+    "L\"MY\"",
     "\" ORDER BY c.ClanPoints DESC, c.ClanId ASC LIMIT 5 OFFSET ?\"",
     "\" ORDER BY c.CreatedAtUnixSeconds DESC, c.ClanId DESC LIMIT 5 OFFSET ?\"",
     "\"\"",
@@ -3920,6 +3944,13 @@
       "\"SELECT c.NameUtf16, c.CharacterType, c.ColorIndex, c.Level, c.Experience, c.Lucci, c.Cash FROM Characters c JOIN Accounts a ON a.AccountId = c.AccountId WHERE c.CharacterId = ? AND c.AccountId = ? AND a.IsDisabled = 0 FOR UPDATE\""
     ],
     "fixture": "tests/battle_records_cases.txt"
+  },
+  "remote_auth_transport_addition": {
+    "scope": "Opt-in independent TLS authentication, explicit companion framing and shared attempt limiter. Schannel TLS1.2+, machine certificate/private-key and account DB startup preflight, bounded deadlines/admission, explicit advertised handoff IPv4. Native game fixtures unchanged. Database-free real Schannel transport tested; live database/register/login/game interoperability pending.",
+    "new_literals": 24,
+    "evidence": "F:/BF1304/docs/BubbleFighter_KR1304_Server/task3-report.md",
+    "frozen_fixtures_changed": false,
+    "frozen_literal_manifest_changed": false
   },
   "battle_awards_changes": {
     "reason": "Durable request v3 freezes ordinary mode1 result and accepted combat counts; updates them atomically with wallet and immutable V1 receipt. Older request versions never award counters. No schema or network changes.",

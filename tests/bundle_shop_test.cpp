@@ -314,7 +314,9 @@ int RunBundleShopTests() {
   for (std::size_t index = 0; index < 8; ++index)
     historical_revision |= static_cast<std::uint64_t>(digest.digest[index])
                            << (8 * index);
-  Check(historical_revision == 10020168155133007003ULL &&
+  // 2026-10-16: SubCategory 107 is the wardrobe's 套装 page (page type 0) as
+  // the client's own ShopItem2.xml says, so the ordinary catalog digest moved.
+  Check(historical_revision == 16096494705104701694ULL &&
         catalog.catalog_revision != historical_revision);
   const auto another =
       shop::CreateShopCatalogResponse({0, 99999}, owner, now + 999);

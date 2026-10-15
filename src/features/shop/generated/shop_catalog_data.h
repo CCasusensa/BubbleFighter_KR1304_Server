@@ -7090,7 +7090,10 @@ namespace bubble_fighter::server::features::shop
         {103U, 100U, u"服装", 1108U, true, 0U},
         {105U, 100U, u"手套", 1106U, true, 0U},
         {106U, 100U, u"靴子", 1107U, true, 0U},
-        {107U, 100U, u"全部服装", 1101U, true, 2U},
+        // Config/ShopItem2.xml: 107 is SetClothes (套装), page type 0 - a real
+        // sub-category page, not an All_xxx aggregate. Page type 2 here made the
+        // wardrobe's first tab list every clothes card instead of the bundles.
+        {107U, 100U, u"套装", 1101U, true, 0U},
         {108U, 100U, u"上衣", 1103U, true, 0U},
         {109U, 100U, u"裤子", 1104U, true, 0U},
         {110U, 100U, u"连体衣", 1105U, true, 0U},

@@ -4,6 +4,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <iostream>
 #include <map>
 #include <span>
 #include <stdexcept>
@@ -159,6 +160,12 @@ protocol::ShopEntryResponse CreateShopCatalogResponse(
   // Content revision excludes the requested selection and wall clock.
   // It changes when offers, prices, labels or page data change.
   // SHA-256's first eight bytes are a cache hint, never authorization.
+  FinalizeShopCatalogResponse(response, request);
+  return response;
+}
+
+void FinalizeShopCatalogResponse(protocol::ShopEntryResponse& response,
+                                 const protocol::ShopEntryRequest& request) {
   const auto hash = HashCatalog(response.Encode().payload);
   for (std::size_t index = 0; index < 8; ++index) {
     response.catalog_revision |= static_cast<std::uint64_t>(hash[index])
@@ -168,20 +175,32 @@ protocol::ShopEntryResponse CreateShopCatalogResponse(
     response.catalog_revision = 1;
   }
   if (!response.categories.empty()) {
-    const auto requested =
-        std::find_if(response.categories.begin(), response.categories.end(),
-                     [&](const auto& category) {
-                       return category.identifier == request.selected_category;
-                     });
+    // The client sends the page it wants to show: either a main category or one
+    // of the pages inside it. Echo it back when the published tree contains it,
+    // otherwise fall back to the first page. Resolving only against main
+    // categories left every click on a sub page staring at the same tab.
+    const bool published = std::any_of(
+        response.categories.begin(), response.categories.end(),
+        [&](const auto& category) {
+          return category.identifier == request.selected_category ||
+                 std::any_of(category.sub_categories.begin(),
+                             category.sub_categories.end(),
+                             [&](const auto& sub) {
+                               return sub.identifier == request.selected_category;
+                             });
+        });
     const auto fallback =
         std::min_element(response.categories.begin(), response.categories.end(),
                          [](const auto& a, const auto& b) {
                            return a.display_order < b.display_order;
                          });
     response.selected_category =
-        (requested != response.categories.end() ? requested : fallback)
-            ->identifier;
+        published ? request.selected_category : fallback->identifier;
   }
-  return response;
+  std::cout << "Shop entry: requested-revision=" << request.catalog_revision
+            << " requested-page=" << request.selected_category
+            << " resolved-page=" << response.selected_category
+            << " cards=" << response.items.size()
+            << " categories=" << response.categories.size() << std::endl;
 }
 }  // namespace bubble_fighter::server::features::shop

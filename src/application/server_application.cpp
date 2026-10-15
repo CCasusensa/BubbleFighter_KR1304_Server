@@ -18,6 +18,7 @@
 #include "features/authentication/launcher_policy.h"
 #include "features/rooms/match_profile_updates.h"
 #include "features/shop/shop_catalog_response.h"
+#include "features/shop/shop_list.h"
 #include "network/clan_tcp_server.h"
 #include "network/auth_tls_server.h"
 #include "network/connection_heartbeat.h"
@@ -53,6 +54,7 @@ void PrintUsage() {
       << "Login: --login <username> --database-config <path> --ticket-file <new-path>\n"
       << "Optional channels: --channel-rules <path> enables isolated categories with explicit level limits.\n"
       << "Optional launcher policy: --launcher-policy <path> hands build-a-room mode tables to launchers.\n"
+      << "Optional shop table: --shop-table <directory> publishes the mall from shop_items.csv / shop_offers.csv / shop_sets.csv.\n"
       << "Optional clan service: --clan-port <0..65535> requires --database-config and the clan migration.\n"
       << "Optional TLS auth: --auth-port <1..65535> --auth-cert-thumbprint <SHA1> requires --database-config and a LocalMachine\\My certificate with private key.\n"
       << "Endpoint: --advertise-address <nonzero IPv4> is required for wildcard listen and is used for game handoffs.\n"
@@ -94,6 +96,8 @@ int ServerApplication::Run(int argc, char* argv[]) const {
   std::filesystem::path match_rules_path;
   std::filesystem::path channel_rules_path;
   std::filesystem::path launcher_policy_path;
+  // 商城表目录（shop_items.csv / shop_offers.csv / shop_sets.csv）。
+  std::filesystem::path shop_table_path;
   for (int index = 1; index < argc; ++index) {
     const std::string_view argument(argv[index]);
     if (argument == "--clan-maintenance" && !maintenance_only) {
@@ -189,6 +193,9 @@ int ServerApplication::Run(int argc, char* argv[]) const {
     } else if (argument == "--launcher-policy" && launcher_policy_path.empty() &&
                index + 1 < argc) {
       launcher_policy_path = argv[++index];
+    } else if (argument == "--shop-table" && shop_table_path.empty() &&
+               index + 1 < argc) {
+      shop_table_path = argv[++index];
     } else if (argument == "--once" && !once) {
       once = true;
     } else {
@@ -485,10 +492,47 @@ int ServerApplication::Run(int argc, char* argv[]) const {
       ready_future
           .get();  // Main listener starts only after clan bind succeeds.
     }
+    // 商城表（运营者自己维护的那份）：启动时读一次，读了就按表下发，读不到
+    // 就继续用钉死的资源快照，不把服务器卡在启动上。
+    std::shared_ptr<const features::shop::ShopList> shop_list;
+    if (!shop_table_path.empty()) {
+      std::string shop_error;
+      auto loaded =
+          features::shop::ShopList::Load(shop_table_path, &shop_error);
+      if (loaded) {
+        std::cout << "Shop table: " << loaded->entries().size() << " cards / "
+                  << loaded->offer_count() << " offers";
+        if (loaded->skipped_rows())
+          std::cout << " (" << loaded->skipped_rows() << " rows skipped)";
+        // 货币分布：改判点券行（A 档）之后这里应该是 cash=0，否则就是表里还留着
+        // 点券行，客户端的点券购买按钮会因此仍是灰的。
+        std::size_t lucci = 0;
+        std::size_t cash = 0;
+        for (const auto& entry : loaded->entries()) {
+          for (const auto& price : entry.prices) {
+            if (price.type == 1) {
+              ++lucci;
+            } else if (price.type == 9) {
+              ++cash;
+            }
+          }
+        }
+        std::cout << " [lucci=" << lucci << " cash=" << cash << "]";
+        std::cout << " from " << shop_table_path.string() << std::endl;
+        shop_list = std::make_shared<const features::shop::ShopList>(
+            std::move(*loaded));
+      // Purchases read the same table the mall was pushed from, so the charged
+      // price cannot drift from the displayed one.
+      features::shop::ShopList::SetActive(shop_list);
+      } else {
+        std::cout << "Shop table not loaded (" << shop_error
+                  << "); using the pinned catalog." << std::endl;
+      }
+    }
     const auto create_handler =
         [database_configuration, idle_timeout_seconds, rooms, rules, plazas,
          social, invitations, parties, scene_transfers, channels, handoffs,
-         clan_authentication]() -> network::ConnectionHandlers {
+         clan_authentication, shop_list]() -> network::ConnectionHandlers {
       sessions::PlayerSession::TicketConsumer consume;
       if (!database_configuration.empty()) {
         consume = [database_configuration](std::string_view ticket) {
@@ -540,7 +584,20 @@ int ServerApplication::Run(int argc, char* argv[]) const {
                                    observed_at)
                   .packets;
             };
-        shop_catalog = features::shop::CreateShopCatalogResponse;
+        // The mall is pushed from the operator's table when one was loaded at
+        // startup; without it the pinned resource snapshot stays the fallback.
+        shop_catalog =
+            [shop_list](const protocol::ShopEntryRequest& request,
+                        const features::characters::CharacterRecord& character,
+                        std::uint64_t observed_at) {
+              if (shop_list)
+                return features::shop::CreateShopListResponse(*shop_list,
+                                                               request,
+                                                               character);
+              return features::shop::CreateShopCatalogResponse(request,
+                                                               character,
+                                                               observed_at);
+            };
         shop_purchase =
             [database_configuration](
                 const features::characters::CharacterRecord& character,

@@ -6,6 +6,7 @@
 #include "features/characters/character_profile.h"
 #include "features/inventory/inventory_presentation.h"
 #include "features/inventory/inventory_validation.h"
+#include "features/shop/shop_list.h"
 #include "features/inventory/item_catalog.h"
 #include "features/shop/shop_stock_catalog.h"
 #include "features/shop/stock_set_catalog.h"
@@ -43,17 +44,35 @@ void ValidateInventory(const characters::CharacterRecord& character,
 std::optional<inventory::CashBundle> PrepareBundleOffer(std::uint32_t id) {
   using namespace inventory;
   const auto* set = StockSetCatalog::Find(id);
+  // The published row wins over the resource price, so buying a bundle charges
+  // exactly what the mall showed for it.
+  const auto* table = ShopList::Active();
+  const auto* table_set = table ? table->FindEntry(id) : nullptr;
+  const auto price =
+      table_set && table_set->kind == 1 && !table_set->prices.empty()
+          ? static_cast<std::uint64_t>(table_set->prices.front().sell_price)
+          : set ? set->sell_price : 0ULL;
+  const auto* offer_currency =
+      table_set && table_set->kind == 1 && !table_set->prices.empty()
+          ? &table_set->prices.front()
+          : nullptr;
+  const bool currency_ok =
+      offer_currency ? (offer_currency->type == 1 || offer_currency->type == 9)
+                     : (set != nullptr &&
+                        (set->currency == ShopCurrency::kCash ||
+                         set->currency == ShopCurrency::kLucci));
+  const bool lucci_currency_offer =
+      offer_currency ? offer_currency->type == 1
+                     : (set != nullptr && set->currency == ShopCurrency::kLucci);
   if (!set || !set->resource_listed || set->resource_type != 1 ||
-      set->sell_price == 0 || set->sell_price > kBalanceLimit ||
+      price == 0 || price > kBalanceLimit ||
       set->show_price > kBalanceLimit || set->bonus_lucci > kBalanceLimit ||
       set->denied_characters != "none" ||
-      (set->currency != ShopCurrency::kCash &&
-       set->currency != ShopCurrency::kLucci) ||
-      (set->currency == ShopCurrency::kLucci && set->bonus_lucci != 0))
+      !currency_ok || (lucci_currency_offer && set->bonus_lucci != 0))
     return {};
   CashBundle offer;
   offer.stock_set_id = id;
-  offer.cash_price = static_cast<std::uint32_t>(set->sell_price);
+  offer.cash_price = static_cast<std::uint32_t>(price);
   offer.bonus_lucci = set->bonus_lucci;
   offer.refundable = set->resource_refundable;
   for (const auto stock_id : set->stock_ids) {

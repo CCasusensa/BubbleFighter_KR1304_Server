@@ -15,6 +15,7 @@
 #include "features/inventory/inventory_validation.h"
 #include "features/inventory/item_catalog.h"
 #include "features/shop/shop_catalog.h"
+#include "features/shop/shop_list.h"
 #include "features/shop/shop_stock_catalog.h"
 #include "protocol/inventory/cash_inventory_pickup_request.h"
 #include "protocol/inventory/cash_inventory_pickup_response.h"
@@ -62,37 +63,46 @@ CashPurchaseResult CashShop::Purchase(
     return result;
   };
   const auto* stock = ShopStockCatalog::Find(request.stock_id);
-  if (!stock || request.value_at4 != 0) {
+  const auto* table = ShopList::Active();
+  const auto* table_offer = table ? table->FindOffer(request.stock_id) : nullptr;
+  if ((!stock && !table_offer) || request.value_at4 != 0) {
     return refuse(Response::kIneligible);
   }
-  const auto* offer = ShopCatalog::FindItem(stock->item_id);
-  const auto* item = ItemCatalog::Find(stock->item_id);
+  // The published row wins: it carries the price the mall displayed. Without a
+  // table the pinned resource row stays the source, exactly as before.
+  const auto item_id = table_offer ? table_offer->item_id : stock->item_id;
+  const auto duration = table_offer ? table_offer->duration : stock->duration;
+  const auto price = table_offer ? table_offer->sell_price : stock->sell_price;
+  const auto* offer = ShopCatalog::FindItem(item_id);
+  const auto* item = ItemCatalog::Find(item_id);
   // Original E17E80 treats currency kinds 1 (Cash) and 3 (CashCn)
   // against the same cash balance; neither uses the Lucci balance.
+  const bool cash_currency =
+      table_offer ? table_offer->type == 9
+                  : offer && (offer->currency == ShopCurrency::kCash ||
+                              offer->currency == ShopCurrency::kCashCn);
   if (!offer || !item ||
-      (offer->currency != ShopCurrency::kCash &&
-       offer->currency != ShopCurrency::kCashCn) ||
+      !cash_currency ||
       (item->usage != InventoryUsage::kCount &&
        item->usage != InventoryUsage::kDuration &&
        item->usage != InventoryUsage::kLife) ||
-      stock->sell_price > characters::CharacterStatistics::kMaxValue ||
-      stock->duration == 0 ||
+      price > characters::CharacterStatistics::kMaxValue || duration == 0 ||
       (item->usage == InventoryUsage::kDuration &&
-       stock->duration != 0xFFFFFFFFU && stock->duration > 10000) ||
+       duration != 0xFFFFFFFFU && duration > 10000) ||
       (item->usage != InventoryUsage::kDuration &&
-       stock->duration > InventorySlot::kMaxQuantity)) {
+       duration > InventorySlot::kMaxQuantity)) {
     return refuse(Response::kIneligible);
   }
   const auto chunks = item->usage == InventoryUsage::kDuration
                           ? 1U
-                          : (stock->duration + 65534U) / 65535U;
+                          : (duration + 65534U) / 65535U;
   if (chunks > protocol::CashInventoryUpdateNotification::kMaxSlots -
                    result.pending.slots.size() -
                    result.pending.bundles.size()) {
     return refuse(Response::kIneligible);
   }
   const auto max_amount = item->usage == InventoryUsage::kCount
-                              ? (std::max)(offer->max_amount, stock->duration)
+                              ? (std::max)(offer->max_amount, duration)
                               : offer->max_amount;
   // Reserve grant capacity against all pending purchases of this item.
   // This projection is discarded; purchase does not start the duration.
@@ -103,7 +113,7 @@ CashPurchaseResult CashShop::Purchase(
       return refuse(Response::kIneligible);
   }
   for (const auto& slot : result.pending.slots) {
-    if (slot.item_id == stock->item_id &&
+    if (slot.item_id == item_id &&
         InventoryGrant::Apply(projected, slot.item_id, slot.amount,
                               slot.max_amount, observed_at_unix_seconds) !=
             InventoryGrantStatus::kGranted) {
@@ -111,8 +121,8 @@ CashPurchaseResult CashShop::Purchase(
     }
   }
   const auto grant =
-      InventoryGrant::Apply(projected, stock->item_id, stock->duration,
-                            max_amount, observed_at_unix_seconds);
+      InventoryGrant::Apply(projected, item_id, duration, max_amount,
+                            observed_at_unix_seconds);
   if (grant == InventoryGrantStatus::kAlreadyOwned) {
     return refuse(Response::kAlreadyOwned);
   }
@@ -120,7 +130,7 @@ CashPurchaseResult CashShop::Purchase(
     return refuse(Response::kIneligible);
   }
   (void)projected.ToRecords(character.account_id, observed_at_unix_seconds);
-  if (character.statistics.cash < stock->sell_price) {
+  if (character.statistics.cash < price) {
     return refuse(Response::kInsufficientCash);
   }
   if (assigned_slot_id == 0 || assigned_slot_id > CashInventory::kMaxSlotId ||
@@ -137,24 +147,24 @@ CashPurchaseResult CashShop::Purchase(
                   })) {
     throw std::invalid_argument("Invalid trusted cash slot allocation.");
   }
-  auto remaining = stock->duration;
+  auto remaining = duration;
   for (std::uint32_t index = 0; index < chunks; ++index) {
     const auto amount = item->usage == InventoryUsage::kDuration
                             ? remaining
                             : (std::min)(remaining, 65535U);
     result.pending.slots.push_back(
-        {assigned_slot_id + index, stock->stock_id, stock->item_id, item->usage,
-         amount, max_amount, index == 0 ? stock->sell_price : 0U,
+        {assigned_slot_id + index, request.stock_id, item_id, item->usage,
+         amount, max_amount, index == 0 ? price : 0U,
          observed_at_unix_seconds, record_purchase ? assigned_slot_id : 0U});
     remaining -= amount;
   }
   if (record_purchase) {
     result.pending.purchases.push_back(
-        {assigned_slot_id, stock->stock_id, stock->item_id, item->usage,
-         stock->duration, max_amount, stock->sell_price,
+        {assigned_slot_id, request.stock_id, item_id, item->usage,
+         duration, max_amount, price,
          observed_at_unix_seconds, chunks, false});
   }
-  result.cash_cost = stock->sell_price;
+  result.cash_cost = price;
   result.purchase.character.statistics.cash -= result.cash_cost;
   result.purchase.response.result = Response::kSuccess;
   result.purchase.response.value_at40 = assigned_slot_id;

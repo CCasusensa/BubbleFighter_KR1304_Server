@@ -102,10 +102,12 @@
     <ClInclude Include="..\src\features\authentication\credential_crypto.h" />
     <ClCompile Include="..\src\features\authentication\initial_handshake.cpp" />
     <ClInclude Include="..\src\features\authentication\initial_handshake.h" />
+    <ClCompile Include="..\src\features\authentication\launcher_policy.cpp" />
+    <ClInclude Include="..\src\features\authentication\launcher_policy.h" />
     <ClCompile Include="..\src\features\authentication\login_profile.cpp" />
     <ClInclude Include="..\src\features\authentication\login_profile.h" />
-    <ClCompile Include="..\src\features\authentication\remote_auth.cpp" /><ClCompile Include="..\src\features\authentication\launcher_policy.cpp" />
-    <ClInclude Include="..\src\features\authentication\remote_auth.h" /><ClInclude Include="..\src\features\authentication\launcher_policy.h" />
+    <ClCompile Include="..\src\features\authentication\remote_auth.cpp" />
+    <ClInclude Include="..\src\features\authentication\remote_auth.h" />
     <ClCompile Include="..\src\features\battle\combat_damage.cpp" />
     <ClInclude Include="..\src\features\battle\combat_damage.h" />
     <ClCompile Include="..\src\features\battle\combat_geometry.cpp" />
@@ -270,6 +272,8 @@
     <ClInclude Include="..\src\features\shop\shop_catalog.h" />
     <ClCompile Include="..\src\features\shop\shop_catalog_response.cpp" />
     <ClInclude Include="..\src\features\shop\shop_catalog_response.h" />
+    <ClCompile Include="..\src\features\shop\shop_list.cpp" />
+    <ClInclude Include="..\src\features\shop\shop_list.h" />
     <ClCompile Include="..\src\features\shop\shop_purchase.cpp" />
     <ClInclude Include="..\src\features\shop\shop_purchase.h" />
     <ClCompile Include="..\src\features\shop\shop_stock_catalog.cpp" />
@@ -327,6 +331,7 @@
     <None Include="..\src\persistence\migrations\create_training_clan_history.sql" />
     <None Include="..\src\persistence\migrations\create_weapon_presets.sql" />
     <None Include="..\src\persistence\migrations\expand_cash_inventory_usage.sql" />
+    <None Include="..\src\persistence\migrations\expand_character_name_width.sql" />
     <None Include="..\src\persistence\migrations\expand_clan_recruitment.sql" />
     <ClCompile Include="..\src\persistence\my_sql_account_store.cpp" />
     <ClInclude Include="..\src\persistence\my_sql_account_store.h" />

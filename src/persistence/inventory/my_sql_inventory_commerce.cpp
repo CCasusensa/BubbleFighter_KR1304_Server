@@ -7,6 +7,7 @@
 #include "features/characters/character_store.h"
 #include "features/shop/cash_shop.h"
 #include "features/shop/shop_catalog.h"
+#include "features/shop/shop_list.h"
 #include "features/shop/shop_purchase.h"
 #include "features/shop/shop_stock_catalog.h"
 #include "features/shop/stock_set_catalog.h"
@@ -44,8 +45,21 @@ features::shop::ShopPurchaseResult MySqlInventoryStore::Purchase(
   const auto* stock = features::shop::ShopStockCatalog::Find(request.stock_id);
   const auto* offer =
       stock ? features::shop::ShopCatalog::FindItem(stock->item_id) : nullptr;
-  if (offer && (offer->currency == features::shop::ShopCurrency::kCash ||
-                offer->currency == features::shop::ShopCurrency::kCashCn)) {
+  // The published table decides delivery too. Only the pinned resource snapshot
+  // was consulted here while ShopPurchase::Prepare already charges the
+  // operator's row, so a re-issued offer (table says Lucci, resource says Cash)
+  // was billed as a Lucci purchase and then filed into the Cash box. A loaded
+  // table now wins; without one the resource row stays the source.
+  const auto* table = features::shop::ShopList::Active();
+  const auto* table_offer =
+      table ? table->FindOffer(request.stock_id) : nullptr;
+  const bool cash_offer =
+      table_offer
+          ? table_offer->type == 9
+          : offer &&
+                (offer->currency == features::shop::ShopCurrency::kCash ||
+                 offer->currency == features::shop::ShopCurrency::kCashCn);
+  if (cash_offer) {
     auto pending =
         LoadCashSlots(connection, character.account_id, character.character_id);
     const auto previous_pending_count = pending.slots.size();

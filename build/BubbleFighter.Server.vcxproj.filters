@@ -162,6 +162,9 @@
     <ClCompile Include="..\src\features\authentication\initial_handshake.cpp">
       <Filter>features\authentication</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\features\authentication\launcher_policy.cpp">
+      <Filter>features\authentication</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\features\authentication\login_profile.cpp">
       <Filter>features\authentication</Filter>
     </ClCompile>
@@ -397,6 +400,9 @@
       <Filter>features\shop</Filter>
     </ClCompile>
     <ClCompile Include="..\src\features\shop\shop_catalog_response.cpp">
+      <Filter>features\shop</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\features\shop\shop_list.cpp">
       <Filter>features\shop</Filter>
     </ClCompile>
     <ClCompile Include="..\src\features\shop\shop_purchase.cpp">
@@ -1047,6 +1053,9 @@
     <ClInclude Include="..\src\features\authentication\initial_handshake.h">
       <Filter>features\authentication</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\features\authentication\launcher_policy.h">
+      <Filter>features\authentication</Filter>
+    </ClInclude>
     <ClInclude Include="..\src\features\authentication\login_profile.h">
       <Filter>features\authentication</Filter>
     </ClInclude>
@@ -1312,6 +1321,9 @@
       <Filter>features\shop</Filter>
     </ClInclude>
     <ClInclude Include="..\src\features\shop\shop_catalog_response.h">
+      <Filter>features\shop</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\features\shop\shop_list.h">
       <Filter>features\shop</Filter>
     </ClInclude>
     <ClInclude Include="..\src\features\shop\shop_purchase.h">
@@ -1932,6 +1944,9 @@
       <Filter>persistence\migrations</Filter>
     </None>
     <None Include="..\src\persistence\migrations\expand_cash_inventory_usage.sql">
+      <Filter>persistence\migrations</Filter>
+    </None>
+    <None Include="..\src\persistence\migrations\expand_character_name_width.sql">
       <Filter>persistence\migrations</Filter>
     </None>
     <None Include="..\src\persistence\migrations\expand_clan_recruitment.sql">

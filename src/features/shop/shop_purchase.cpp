@@ -13,6 +13,7 @@
 #include "features/inventory/inventory_validation.h"
 #include "features/inventory/item_catalog.h"
 #include "features/shop/shop_catalog.h"
+#include "features/shop/shop_list.h"
 #include "features/shop/shop_stock_catalog.h"
 #include "protocol/inventory/inventory_view_update_notification.h"
 #include "protocol/shop/shop_purchase_request.h"
@@ -49,39 +50,48 @@ ShopPurchaseResult ShopPurchase::Prepare(
     return result;
   };
   const auto* stock = ShopStockCatalog::Find(request.stock_id);
-  if (request.value_at4 != 0 || !stock) {
+  const auto* table = ShopList::Active();
+  const auto* table_offer = table ? table->FindOffer(request.stock_id) : nullptr;
+  if (request.value_at4 != 0 || (!stock && !table_offer)) {
     return refuse(Response::kIneligible);
   }
-  const auto* offer = ShopCatalog::FindItem(stock->item_id);
-  const auto* definition = ItemCatalog::Find(stock->item_id);
+  // The published row wins: it carries the price the mall displayed. Without a
+  // table the pinned resource row stays the source, exactly as before.
+  const auto item_id = table_offer ? table_offer->item_id : stock->item_id;
+  const auto duration = table_offer ? table_offer->duration : stock->duration;
+  const auto price = table_offer ? table_offer->sell_price : stock->sell_price;
+  const auto* offer = ShopCatalog::FindItem(item_id);
+  const auto* definition = ItemCatalog::Find(item_id);
   // All resource and fallback Stock entries of a published item are offers.
   // Looking them up directly avoids rebuilding a 1 MiB catalog per buy.
-  if (!offer || !definition || offer->currency != ShopCurrency::kLucci ||
+  const bool lucci_currency = table_offer
+                                  ? table_offer->type == 1
+                                  : offer && offer->currency == ShopCurrency::kLucci;
+  if (!offer || !definition || !lucci_currency ||
       (definition->usage != InventoryUsage::kCount &&
        definition->usage != InventoryUsage::kDuration &&
        definition->usage != InventoryUsage::kLife) ||
-      stock->sell_price > characters::CharacterStatistics::kMaxValue ||
-      stock->duration == 0) {
+      price > characters::CharacterStatistics::kMaxValue || duration == 0) {
     return refuse(Response::kIneligible);
   }
 
   auto granted = result.inventory;
   const auto grant =
-      InventoryGrant::Apply(granted, stock->item_id, stock->duration,
-                            offer->max_amount, observed_at_unix_seconds);
+      InventoryGrant::Apply(granted, item_id, duration, offer->max_amount,
+                            observed_at_unix_seconds);
   if (grant == InventoryGrantStatus::kAlreadyOwned) {
     return refuse(Response::kAlreadyOwned);
   }
   if (grant != InventoryGrantStatus::kGranted) {
     return refuse(Response::kIneligible);
   }
-  if (character.statistics.lucci < stock->sell_price) {
+  if (character.statistics.lucci < price) {
     return refuse(Response::kInsufficientLucci);
   }
   result.inventory = std::move(granted);
-  result.character.statistics.lucci -= stock->sell_price;
-  result.lucci_cost = stock->sell_price;
-  result.changed_item_id = stock->item_id;
+  result.character.statistics.lucci -= price;
+  result.lucci_cost = price;
+  result.changed_item_id = item_id;
   result.response.result = Response::kSuccess;
   // Ordinary Lucci UI: no special-shop selector or cash pickup identity.
   // Opaque zero/empty fields are an explicit local baseline, not claimed

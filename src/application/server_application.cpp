@@ -640,19 +640,23 @@ int ServerApplication::Run(int argc, char* argv[]) const {
         if (before != session.State() &&
             session.State() ==
                 sessions::PlayerSessionState::kAwaitingCharacterCreation) {
-          std::cout << "Ticket accepted; character creation required."
+          std::cout << network::ConnectionLogPrefix()
+                    << "Ticket accepted; character creation required."
                     << std::endl;
         }
         if (before != session.State() &&
             session.State() ==
                 sessions::PlayerSessionState::kAwaitingCharacterProfile) {
           std::cout
+              << network::ConnectionLogPrefix()
               << (packet.message_id == 3
                       ? "Ticket accepted; stored character profile pending."
                       : "Character persisted; login profile pending.")
               << std::endl;
           if (session.Character()) {
-            std::cout << "CharacterType=" << session.Character()->character_type
+            std::cout << network::ConnectionLogPrefix()
+                      << "CharacterType="
+                      << session.Character()->character_type
                       << " ColorIndex=" << session.Character()->color_index
                       << std::endl;
           }
@@ -663,6 +667,7 @@ int ServerApplication::Run(int argc, char* argv[]) const {
              session.State() ==
                  sessions::PlayerSessionState::kAwaitingMenuInitialization)) {
           std::cout
+              << network::ConnectionLogPrefix()
               << (packet.message_id == 3
                       ? "Ticket accepted; stored character login profile sent."
                       : "Persisted character login profile sent.")
@@ -671,7 +676,8 @@ int ServerApplication::Run(int argc, char* argv[]) const {
         if (before != session.State() &&
             session.State() ==
                 sessions::PlayerSessionState::kMenuInitializationSent) {
-          std::cout << "Owned character menu initialization sent." << std::endl;
+          std::cout << network::ConnectionLogPrefix()
+                    << "Owned character menu initialization sent." << std::endl;
         }
         const bool close =
             session.State() == sessions::PlayerSessionState::kRejected;

@@ -77,6 +77,28 @@ void SendAll(SOCKET socket, std::span<const std::uint8_t> bytes) {
   }
 }
 
+std::string ToHex(std::span<const std::uint8_t> bytes) {
+  static constexpr char kDigits[] = "0123456789abcdef";
+  std::string text;
+  text.reserve(bytes.size() * 2);
+  for (const auto value : bytes) {
+    text.push_back(kDigits[value >> 4]);
+    text.push_back(kDigits[value & 0x0F]);
+  }
+  return text;
+}
+
+// Message ids whose payload is still unidentified; the hex dump is how the
+// client's own request gets read back when a page stalls.
+constexpr bool IsUnidentifiedClientMessage(std::uint16_t message_id) {
+  return message_id == 2085 || message_id == 2086;
+}
+
+std::string& ConnectionTagStorage() {
+  thread_local std::string tag;
+  return tag;
+}
+
 struct GameWire {
   using Handlers = ConnectionHandlers;
   using Result = PacketHandlingResult;
@@ -119,10 +141,12 @@ struct ClanWire {
 template <class Wire>
 void ReceiveConnection(SOCKET socket, typename Wire::Handlers handlers,
                        std::uint32_t idle_timeout_seconds,
-                       std::stop_token stop = {}) {
+                       std::stop_token stop = {},
+                       std::uint32_t connection_id = 0) {
   if (!handlers.on_packet) {
     throw std::invalid_argument("Missing packet handler.");
   }
+  SetConnectionLogTag("Conn#" + std::to_string(connection_id));
   // Local resource policy; original server timeout is not established.
   const DWORD timeout_milliseconds = idle_timeout_seconds * 1000;
   for (const auto option : {SO_RCVTIMEO, SO_SNDTIMEO}) {
@@ -141,12 +165,14 @@ void ReceiveConnection(SOCKET socket, typename Wire::Handlers handlers,
       const auto outgoing = wire.Encode(response);
       SendAll(socket, outgoing);
       std::osyncstream(std::cout)
-          << Wire::kLabel << "ServerToClient MessageId=" << response.message_id
+          << ConnectionLogPrefix() << Wire::kLabel
+          << "ServerToClient MessageId=" << response.message_id
           << " PayloadBytes=" << response.payload.size() << std::endl;
     }
     if (outcome.close_connection) {
       shutdown(socket, SD_SEND);
       std::osyncstream(std::cout)
+          << ConnectionLogPrefix()
           << "Connection closed by message handler. Packets=" << packet_count
           << std::endl;
     }
@@ -182,7 +208,8 @@ void ReceiveConnection(SOCKET socket, typename Wire::Handlers handlers,
     if (received == 0) {
       wire.decoder.Finish();
       std::osyncstream(std::cout)
-          << "Connection closed. Packets=" << packet_count << std::endl;
+          << ConnectionLogPrefix() << "Connection closed. Packets="
+          << packet_count << std::endl;
       return;
     }
     last_receive = std::chrono::steady_clock::now();
@@ -190,9 +217,14 @@ void ReceiveConnection(SOCKET socket, typename Wire::Handlers handlers,
     for (const auto& packet : wire.Feed(bytes)) {
       ++packet_count;
       // Payloads can contain credentials. Log metadata only.
-      std::osyncstream(std::cout)
-          << Wire::kLabel << "ClientToServer MessageId=" << packet.message_id
-          << " PayloadBytes=" << packet.payload.size() << std::endl;
+      std::osyncstream log(std::cout);
+      log << ConnectionLogPrefix() << Wire::kLabel
+          << "ClientToServer MessageId=" << packet.message_id
+          << " PayloadBytes=" << packet.payload.size();
+      if (IsUnidentifiedClientMessage(packet.message_id)) {
+        log << " PayloadHex=" << ToHex(packet.payload);
+      }
+      log << std::endl;
       if (deliver(handlers.on_packet(packet))) {
         return;
       }
@@ -200,6 +232,17 @@ void ReceiveConnection(SOCKET socket, typename Wire::Handlers handlers,
   }
 }
 }  // namespace
+
+void SetConnectionLogTag(std::string tag) {
+  ConnectionTagStorage() = std::move(tag);
+}
+
+std::string_view ConnectionLogTag() noexcept { return ConnectionTagStorage(); }
+
+std::string ConnectionLogPrefix() {
+  const auto tag = ConnectionTagStorage();
+  return tag.empty() ? std::string{} : tag + " ";
+}
 
 std::uint32_t TcpServer::ParseListenAddress(std::string_view address) {
   std::uint32_t result = 0;
@@ -290,6 +333,7 @@ int RunServer(std::uint16_t port, bool once, const Factory& create_handler,
   };
   std::vector<Worker> workers;
   workers.reserve(64);
+  std::uint32_t connection_sequence = 0;
   // Joins are bounded by shutdown, even if a peer is not reading replies.
   const auto stop_workers = [&] {
     for (auto& worker : workers) {
@@ -316,6 +360,7 @@ int RunServer(std::uint16_t port, bool once, const Factory& create_handler,
       }
       auto connection = std::make_shared<SocketHandle>(
           accept(listener.Get(), nullptr, nullptr));
+      ++connection_sequence;
       if (!once && workers.size() >= 64) {
         continue;
       }
@@ -323,16 +368,19 @@ int RunServer(std::uint16_t port, bool once, const Factory& create_handler,
         auto handlers = create_handler();
         if (once) {
           ReceiveConnection<Wire>(connection->Get(), std::move(handlers),
-                                  idle_timeout_seconds, stop);
+                                  idle_timeout_seconds, stop,
+                                  connection_sequence);
           return 0;
         }
         auto finished = std::make_shared<std::atomic_bool>(false);
         std::jthread thread(
             [connection, finished, handlers = std::move(handlers),
-             idle_timeout_seconds](std::stop_token connection_stop) mutable {
+             idle_timeout_seconds,
+             connection_sequence](std::stop_token connection_stop) mutable {
               try {
                 ReceiveConnection<Wire>(connection->Get(), std::move(handlers),
-                                        idle_timeout_seconds, connection_stop);
+                                        idle_timeout_seconds, connection_stop,
+                                        connection_sequence);
               } catch (const std::exception& error) {
                 if (!connection_stop.stop_requested()) {
                   std::osyncstream(std::cerr)

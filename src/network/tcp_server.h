@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <functional>
 #include <stop_token>
+#include <string>
 #include <string_view>
 #include <vector>
 
@@ -22,6 +23,13 @@ struct ConnectionHandlers {
   std::function<PacketHandlingResult()> on_tick;
 };
 using PacketHandlerFactory = std::function<ConnectionHandlers()>;
+
+// Console log grouping. Every accepted connection gets its own tag so two
+// concurrent sessions can be told apart in the shared stdout log; the tag is
+// thread local because one connection is served by one thread.
+void SetConnectionLogTag(std::string tag);
+std::string_view ConnectionLogTag() noexcept;
+std::string ConnectionLogPrefix();
 
 class TcpServer {
  public:

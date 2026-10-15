@@ -284,8 +284,20 @@ std::optional<ShopList> ShopList::Load(const std::filesystem::path& directory,
     entry.identifier = set_id;
     entry.kind = 1;
     entry.name = name;
-    entry.main_category = kBundleMainCategory;
-    entry.sub_category = kBundleSubCategory;
+    // A bundle row names the page it belongs on, so the wardrobe's own bundle
+    // sets (Clothes/SetClothes) reach the 套装 tab while ordinary packages stay
+    // on Packages. Older sheets without the two columns keep 800/800.
+    std::uint32_t main_category = kBundleMainCategory;
+    std::uint32_t sub_category = kBundleSubCategory;
+    const auto main_text = Trim(Field(row, set_columns, "main_category"));
+    const auto sub_text = Trim(Field(row, set_columns, "sub_category"));
+    if ((!main_text.empty() && !ParseNumber(main_text, main_category)) ||
+        (!sub_text.empty() && !ParseNumber(sub_text, sub_category))) {
+      ++list.skipped_rows_;
+      continue;
+    }
+    entry.main_category = main_category;
+    entry.sub_category = sub_category;
     protocol::ShopPriceRecord price;
     price.stock_id = set_id;
     price.item_id = set_id;

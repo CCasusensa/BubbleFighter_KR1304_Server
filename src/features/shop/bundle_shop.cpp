@@ -64,7 +64,14 @@ std::optional<inventory::CashBundle> PrepareBundleOffer(std::uint32_t id) {
   const bool lucci_currency_offer =
       offer_currency ? offer_currency->type == 1
                      : (set != nullptr && set->currency == ShopCurrency::kLucci);
-  if (!set || !set->resource_listed || set->resource_type != 1 ||
+  // The published table decides: a bundle we push is purchasable even when the
+  // worksheet's own on-sale flag is clear, which is how the sets that only
+  // SetItem defines become reachable. Without a table row the resource flag
+  // still gates the bundle.
+  const bool published_row =
+      table_set != nullptr && table_set->kind == 1 && !table_set->prices.empty();
+  if (!set || (!published_row && !set->resource_listed) ||
+      set->resource_type != 1 ||
       price == 0 || price > kBalanceLimit ||
       set->show_price > kBalanceLimit || set->bonus_lucci > kBalanceLimit ||
       set->denied_characters != "none" ||

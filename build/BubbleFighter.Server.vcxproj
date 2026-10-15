@@ -63,7 +63,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>Ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Ws2_32.lib;Secur32.lib;Crypt32.lib;Ncrypt.lib;Advapi32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -104,6 +104,8 @@
     <ClInclude Include="..\src\features\authentication\initial_handshake.h" />
     <ClCompile Include="..\src\features\authentication\login_profile.cpp" />
     <ClInclude Include="..\src\features\authentication\login_profile.h" />
+    <ClCompile Include="..\src\features\authentication\remote_auth.cpp" />
+    <ClInclude Include="..\src\features\authentication\remote_auth.h" />
     <ClCompile Include="..\src\features\battle\combat_damage.cpp" />
     <ClInclude Include="..\src\features\battle\combat_damage.h" />
     <ClCompile Include="..\src\features\battle\combat_geometry.cpp" />
@@ -282,6 +284,8 @@
     <ClInclude Include="..\src\features\social\social_registry.h" />
     <ClInclude Include="..\src\features\social\social_store.h" />
     <ClCompile Include="..\src\main.cpp" />
+    <ClCompile Include="..\src\network\auth_tls_server.cpp" />
+    <ClInclude Include="..\src\network\auth_tls_server.h" />
     <ClInclude Include="..\src\network\clan_tcp_server.h" />
     <ClCompile Include="..\src\network\connection_heartbeat.cpp" />
     <ClInclude Include="..\src\network\connection_heartbeat.h" />
@@ -351,6 +355,8 @@
     <ClCompile Include="..\src\persistence\my_sql_social_store.cpp" />
     <ClInclude Include="..\src\persistence\my_sql_social_store.h" />
     <ClCompile Include="..\src\persistence\my_sql_training_clan.cpp" />
+    <ClCompile Include="..\src\protocol\auth\auth_wire.cpp" />
+    <ClInclude Include="..\src\protocol\auth\auth_wire.h" />
     <ClCompile Include="..\src\protocol\battle\compressed_shot_record.cpp" />
     <ClInclude Include="..\src\protocol\battle\compressed_shot_record.h" />
     <ClCompile Include="..\src\protocol\battle\game_actor_damage_result_notification.cpp" />

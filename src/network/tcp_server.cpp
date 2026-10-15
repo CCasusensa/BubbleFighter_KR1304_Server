@@ -228,6 +228,21 @@ std::uint32_t TcpServer::ParseListenAddress(std::string_view address) {
   return result;
 }
 
+std::uint32_t TcpServer::ResolveAdvertiseAddress(
+    std::string_view listen_address, std::string_view advertise_address) {
+  const auto listen = ParseListenAddress(listen_address);
+  if (advertise_address.empty() && listen == 0) {
+    throw std::invalid_argument(
+        "Wildcard listen requires an explicit --advertise-address.");
+  }
+  const auto advertised = advertise_address.empty()
+                              ? listen : ParseListenAddress(advertise_address);
+  if (advertised == 0) {
+    throw std::invalid_argument("Advertise address must be nonzero IPv4.");
+  }
+  return advertised;
+}
+
 namespace {
 template <class Wire, class Factory>
 int RunServer(std::uint16_t port, bool once, const Factory& create_handler,

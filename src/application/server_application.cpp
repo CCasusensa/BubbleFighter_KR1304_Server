@@ -18,6 +18,7 @@
 #include "features/rooms/match_profile_updates.h"
 #include "features/shop/shop_catalog_response.h"
 #include "network/clan_tcp_server.h"
+#include "network/auth_tls_server.h"
 #include "network/connection_heartbeat.h"
 #include "network/tcp_server.h"
 #include "persistence/my_sql_account_store.h"
@@ -51,6 +52,8 @@ void PrintUsage() {
       << "Login: --login <username> --database-config <path> --ticket-file <new-path>\n"
       << "Optional channels: --channel-rules <path> enables isolated categories with explicit level limits.\n"
       << "Optional clan service: --clan-port <0..65535> requires --database-config and the clan migration.\n"
+      << "Optional TLS auth: --auth-port <1..65535> --auth-cert-thumbprint <SHA1> requires --database-config and a LocalMachine\\My certificate with private key.\n"
+      << "Endpoint: --advertise-address <nonzero IPv4> is required for wildcard listen and is used for game handoffs.\n"
       << "Clan schedule: --clan-maintenance-unix <future UTC Unix seconds> with --clan-port.\n"
       << "Offline maintenance: --clan-maintenance --database-config <path> (stop all game services first).\n"
       << "Passwords are read from UTF-8 standard input with console echo disabled.\n";
@@ -77,6 +80,12 @@ int ServerApplication::Run(int argc, char* argv[]) const {
   unsigned int port = 0;
   bool has_clan_port = false;
   unsigned int clan_port = 0;
+  bool has_auth_port = false;
+  unsigned int auth_port = 0;
+  std::string_view auth_certificate;
+  bool has_auth_certificate = false;
+  std::string_view advertise_address;
+  bool has_advertise_address = false;
   unsigned int idle_timeout_seconds = 30;
   bool has_idle_timeout = false;
   std::filesystem::path database_configuration;
@@ -119,6 +128,30 @@ int ServerApplication::Run(int argc, char* argv[]) const {
         return 2;
       }
       has_clan_port = true;
+    } else if (argument == "--auth-port" && !has_auth_port &&
+               index + 1 < argc) {
+      const std::string_view value(argv[++index]);
+      const auto result =
+          std::from_chars(value.data(), value.data() + value.size(), auth_port);
+      if (result.ec != std::errc{} ||
+          result.ptr != value.data() + value.size() ||
+          auth_port == 0 || auth_port > 65535) {
+        std::cerr << "Invalid auth port.\n";
+        return 2;
+      }
+      has_auth_port = true;
+    } else if (argument == "--auth-cert-thumbprint" && !has_auth_certificate &&
+               index + 1 < argc) {
+      auth_certificate = argv[++index];
+      has_auth_certificate = true;
+    } else if (argument == "--advertise-address" && !has_advertise_address &&
+               index + 1 < argc) {
+      advertise_address = argv[++index];
+      has_advertise_address = true;
+      if (advertise_address.empty()) {
+        std::cerr << "Advertise address must be nonzero IPv4.\n";
+        return 2;
+      }
     } else if (argument == "--listen-address" && !has_listen_address &&
                index + 1 < argc) {
       listen_address = argv[++index];
@@ -190,7 +223,20 @@ int ServerApplication::Run(int argc, char* argv[]) const {
         << "Clan service requires a database and a distinct listener port.\n";
     return 2;
   }
+  if ((has_auth_port || has_auth_certificate) &&
+      (!has_auth_port || !has_auth_certificate || auth_certificate.empty() ||
+       database_configuration.empty() || auth_port == port ||
+       (has_clan_port && auth_port == clan_port))) {
+    std::cerr << "Auth service requires a database, certificate and distinct nonzero port.\n";
+    return 2;
+  }
   try {
+    const auto advertised_ipv4 = network::TcpServer::ResolveAdvertiseAddress(
+        listen_address, advertise_address);
+    if (has_auth_port) {
+      network::AuthTlsServer::ValidateConfiguration(auth_certificate,
+                                                     database_configuration);
+    }
     std::shared_ptr<features::clans::ClanAuthentication> clan_authentication;
     std::unique_ptr<persistence::MySqlClanStore> clan_service_guard;
     if (has_clan_port) {
@@ -306,6 +352,32 @@ int ServerApplication::Run(int argc, char* argv[]) const {
     }
     const auto handoffs = std::make_shared<sessions::ConnectionHandoffs>();
     std::stop_source service_stop;
+    std::exception_ptr auth_failure;
+    std::jthread auth_worker;
+    if (has_auth_port) {
+      std::promise<void> ready;
+      auto ready_future = ready.get_future();
+      auth_worker = std::jthread(
+          [auth_port, listen_address, auth_certificate, database_configuration,
+           ready = std::move(ready), &service_stop,
+           &auth_failure](std::stop_token stop) mutable {
+            bool listening = false;
+            try {
+              network::AuthTlsServer{}.Run(
+                  static_cast<std::uint16_t>(auth_port), listen_address,
+                  auth_certificate, database_configuration, stop,
+                  [&](std::uint16_t) {
+                    listening = true;
+                    ready.set_value();
+                  });
+            } catch (...) {
+              auth_failure = std::current_exception();
+              if (!listening) ready.set_exception(auth_failure);
+              service_stop.request_stop();
+            }
+          });
+      ready_future.get();
+    }
     std::exception_ptr clan_failure;
     std::jthread clan_worker;
     if (clan_authentication) {
@@ -645,9 +717,8 @@ int ServerApplication::Run(int argc, char* argv[]) const {
     const auto result = network::TcpServer{}.Run(
         static_cast<std::uint16_t>(port), once, create_handler,
         idle_timeout_seconds,
-        [handoffs, listen_address](std::uint16_t actual_port) {
-          const auto address =
-              network::TcpServer::ParseListenAddress(listen_address);
+        [handoffs, advertised_ipv4](std::uint16_t actual_port) {
+          const auto address = advertised_ipv4;
           handoffs->SetEndpoint({static_cast<std::uint8_t>(address >> 24),
                                  static_cast<std::uint8_t>(address >> 16),
                                  static_cast<std::uint8_t>(address >> 8),
@@ -659,7 +730,12 @@ int ServerApplication::Run(int argc, char* argv[]) const {
       clan_worker.request_stop();
       clan_worker.join();
     }
+    if (auth_worker.joinable()) {
+      auth_worker.request_stop();
+      auth_worker.join();
+    }
     if (clan_failure) std::rethrow_exception(clan_failure);
+    if (auth_failure) std::rethrow_exception(auth_failure);
     return result;
   } catch (const std::exception& error) {
     std::cerr << "Server error: " << error.what() << '\n';

@@ -1,5 +1,9 @@
 #include "features/authentication/account_authentication.h"
 
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+#include <Windows.h>
+
 #include <stdexcept>
 
 namespace bubble_fighter::server::features::authentication {
@@ -29,6 +33,13 @@ std::string AccountAuthentication::NormalizeUsername(
 
 bool AccountAuthentication::CreateAccount(std::string_view username,
                                           std::string_view password) {
+  if (password.size() < 12 || password.size() > 1024 ||
+      password.find('\0') != std::string_view::npos ||
+      (!password.empty() &&
+       MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, password.data(),
+                           static_cast<int>(password.size()), nullptr, 0) == 0)) {
+    throw std::invalid_argument("Invalid account password.");
+  }
   const auto normalized = NormalizeUsername(username);
   return store_.CreateAccount(normalized,
                               CredentialCrypto::HashPassword(password));

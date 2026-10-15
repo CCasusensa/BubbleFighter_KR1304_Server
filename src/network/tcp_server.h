@@ -28,6 +28,8 @@ class TcpServer {
   // Strict dotted-decimal IPv4, returned in host byte order. This parses
   // an address only; Windows bind checks whether the interface exists.
   static std::uint32_t ParseListenAddress(std::string_view address);
+  static std::uint32_t ResolveAdvertiseAddress(
+      std::string_view listen_address, std::string_view advertise_address = {});
   // At most 64 concurrent clients; loopback is the default interface.
   // Port zero asks Windows to select an available port.
   int Run(std::uint16_t port, bool once,

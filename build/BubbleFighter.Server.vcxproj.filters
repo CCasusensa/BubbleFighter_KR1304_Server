@@ -94,6 +94,9 @@
     <Filter Include="protocol">
       <UniqueIdentifier>{55EF5073-8B0F-507C-9680-1DB77CA0DBE3}</UniqueIdentifier>
     </Filter>
+    <Filter Include="protocol\auth">
+      <UniqueIdentifier>{42A1EA28-8C91-5338-9004-99AE2B4994BA}</UniqueIdentifier>
+    </Filter>
     <Filter Include="protocol\battle">
       <UniqueIdentifier>{3E7E04F1-939D-5A00-A4E7-700DC2FC0952}</UniqueIdentifier>
     </Filter>
@@ -160,6 +163,9 @@
       <Filter>features\authentication</Filter>
     </ClCompile>
     <ClCompile Include="..\src\features\authentication\login_profile.cpp">
+      <Filter>features\authentication</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\features\authentication\remote_auth.cpp">
       <Filter>features\authentication</Filter>
     </ClCompile>
     <ClCompile Include="..\src\features\battle\combat_damage.cpp">
@@ -415,6 +421,9 @@
       <Filter>features\social</Filter>
     </ClCompile>
     <ClCompile Include="..\src\main.cpp" />
+    <ClCompile Include="..\src\network\auth_tls_server.cpp">
+      <Filter>network</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\network\connection_heartbeat.cpp">
       <Filter>network</Filter>
     </ClCompile>
@@ -501,6 +510,9 @@
     </ClCompile>
     <ClCompile Include="..\src\persistence\my_sql_training_clan.cpp">
       <Filter>persistence</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\protocol\auth\auth_wire.cpp">
+      <Filter>protocol\auth</Filter>
     </ClCompile>
     <ClCompile Include="..\src\protocol\battle\compressed_shot_record.cpp">
       <Filter>protocol\battle</Filter>
@@ -1038,6 +1050,9 @@
     <ClInclude Include="..\src\features\authentication\login_profile.h">
       <Filter>features\authentication</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\features\authentication\remote_auth.h">
+      <Filter>features\authentication</Filter>
+    </ClInclude>
     <ClInclude Include="..\src\features\battle\combat_damage.h">
       <Filter>features\battle</Filter>
     </ClInclude>
@@ -1317,6 +1332,9 @@
     <ClInclude Include="..\src\features\social\social_store.h">
       <Filter>features\social</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\network\auth_tls_server.h">
+      <Filter>network</Filter>
+    </ClInclude>
     <ClInclude Include="..\src\network\clan_tcp_server.h">
       <Filter>network</Filter>
     </ClInclude>
@@ -1370,6 +1388,9 @@
     </ClInclude>
     <ClInclude Include="..\src\persistence\my_sql_social_store.h">
       <Filter>persistence</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\protocol\auth\auth_wire.h">
+      <Filter>protocol\auth</Filter>
     </ClInclude>
     <ClInclude Include="..\src\protocol\battle\compressed_shot_record.h">
       <Filter>protocol\battle</Filter>

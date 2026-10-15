@@ -133,8 +133,9 @@ try {
     $electronCapture = [KrAuthE2eCapture]::new($electron)
     $parentPhase = 'controlled-input'
     if (-not $connected.Wait(10000)) { throw 'Owned Electron controlled input connection timed out.' }
-    $username = if ($TestAccount) { $TestAccount.UserName } else { 'e2e_' + [Convert]::ToHexString([Security.Cryptography.RandomNumberGenerator]::GetBytes(8)).ToLowerInvariant() }
-    $password = if ($TestAccount) { $TestAccount.GetNetworkCredential().Password } else { [Convert]::ToHexString([Security.Cryptography.RandomNumberGenerator]::GetBytes(24)) }
+    # Accounts are 6-18 characters and passwords 6-18 UTF-8 bytes (2026-10-15).
+    $username = if ($TestAccount) { $TestAccount.UserName } else { 'e2e_' + [Convert]::ToHexString([Security.Cryptography.RandomNumberGenerator]::GetBytes(6)).ToLowerInvariant() }
+    $password = if ($TestAccount) { $TestAccount.GetNetworkCredential().Password } else { [Convert]::ToHexString([Security.Cryptography.RandomNumberGenerator]::GetBytes(8)) }
     $inputJson = @{ launcherRoot = $LauncherRoot; host = $FixedHost; authPort = $AuthPort; gamePort = $GamePort; clanPort = $ClanPort;
         certificate = (Resolve-Path -LiteralPath $CertificatePath).Path; wrongCertificate = $wrongPath; gameClient = $client;
         username = $username; password = $password } | ConvertTo-Json -Compress

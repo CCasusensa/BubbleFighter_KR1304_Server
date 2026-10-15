@@ -54,9 +54,11 @@ CredentialDigest Derive(std::string_view password,
 }  // namespace
 
 PasswordVerifier CredentialCrypto::HashPassword(std::string_view password) {
-  if (password.size() < 12 || password.size() > 1024) {
+  // Operator 2026-10-15: stored passwords are 6 to 18 UTF-8 bytes. Verification
+  // stays unconstrained so accounts created under the older rule still work.
+  if (password.size() < 6 || password.size() > 18) {
     throw std::invalid_argument(
-        "Local passwords require 12 to 1024 UTF-8 bytes.");
+        "Local passwords require 6 to 18 UTF-8 bytes.");
   }
   PasswordVerifier verifier;
   RequireSuccess(BCryptGenRandom(nullptr, verifier.salt.data(),

@@ -12,9 +12,12 @@ AccountAuthentication::AccountAuthentication(AccountStore& store)
 
 std::string AccountAuthentication::NormalizeUsername(
     std::string_view username) {
-  if (username.size() < 3 || username.size() > 32) {
+  // Local policy 2026-10-15: an account is 6 to 18 characters for
+  // registration. Sign-in keeps the 3-character floor so older short accounts
+  // can still authenticate; the upper bound is shared.
+  if (username.size() < 3 || username.size() > 18) {
     throw std::invalid_argument(
-        "Local usernames require 3 to 32 ASCII letters, digits or underscores.");
+        "Local usernames require 3 to 18 ASCII letters, digits or underscores.");
   }
   std::string normalized;
   normalized.reserve(username.size());
@@ -33,14 +36,18 @@ std::string AccountAuthentication::NormalizeUsername(
 
 bool AccountAuthentication::CreateAccount(std::string_view username,
                                           std::string_view password) {
-  if (password.size() < 12 || password.size() > 1024 ||
+  // Local policy 2026-10-15: registration passwords are 6 to 18 UTF-8 bytes.
+  if (password.size() < 6 || password.size() > 18 ||
       password.find('\0') != std::string_view::npos ||
-      (!password.empty() &&
-       MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, password.data(),
-                           static_cast<int>(password.size()), nullptr, 0) == 0)) {
+      MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, password.data(),
+                          static_cast<int>(password.size()), nullptr, 0) == 0) {
     throw std::invalid_argument("Invalid account password.");
   }
   const auto normalized = NormalizeUsername(username);
+  if (normalized.size() < 6 || normalized.size() > 18) {
+    throw std::invalid_argument(
+        "Registration requires 6 to 18 ASCII letters, digits or underscores.");
+  }
   return store_.CreateAccount(normalized,
                               CredentialCrypto::HashPassword(password));
 }

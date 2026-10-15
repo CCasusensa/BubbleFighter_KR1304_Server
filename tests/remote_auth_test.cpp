@@ -14,11 +14,11 @@ struct Store final : auth::AccountStore {
                      const auth::PasswordVerifier& password) override {
     if (account) return false;
     account = auth::StoredAccount{7, password, false};
-    return name == "alice";
+    return name == "alice42";
   }
   std::optional<auth::StoredAccount> FindAccount(
       std::string_view name) override {
-    return name == "alice" ? account : std::nullopt;
+    return name == "alice42" ? account : std::nullopt;
   }
   bool AddTicket(std::uint64_t id, const auth::CredentialDigest&,
                  std::uint32_t) override {
@@ -45,17 +45,26 @@ int RunRemoteAuthTests() {
   const auto now = std::chrono::steady_clock::now();
   auto health = remote.Handle({wire::Action::kHealth}, accounts, "10.0.0.1", now);
   Require(health.status == wire::Status::kOk);
-  auto created = remote.Handle(
+  auto short_name = remote.Handle(
       {wire::Action::kRegister, "Alice", "test-password-123"}, accounts,
+      "10.0.0.7", now);
+  Require(short_name.status == wire::Status::kError &&
+          short_name.error == wire::ErrorCode::kBadRequest);
+  auto short_password = remote.Handle(
+      {wire::Action::kRegister, "Alice42", "12345"}, accounts, "10.0.0.8", now);
+  Require(short_password.status == wire::Status::kError &&
+          short_password.error == wire::ErrorCode::kBadRequest);
+  auto created = remote.Handle(
+      {wire::Action::kRegister, "Alice42", "test-password-123"}, accounts,
       "10.0.0.1", now);
   Require(created.status == wire::Status::kOk);
   auto duplicate = remote.Handle(
-      {wire::Action::kRegister, "Alice", "test-password-123"}, accounts,
+      {wire::Action::kRegister, "Alice42", "test-password-123"}, accounts,
       "10.0.0.1", now);
   Require(duplicate.error == wire::ErrorCode::kDuplicate);
   const auto before_login = std::chrono::system_clock::now();
   auto login = remote.Handle(
-      {wire::Action::kLogin, "ALICE", "test-password-123"}, accounts,
+      {wire::Action::kLogin, "ALICE42", "test-password-123"}, accounts,
       "10.0.0.1", now);
   const auto after_login = std::chrono::system_clock::now();
   const auto seconds = [](auto time) {
@@ -72,7 +81,7 @@ int RunRemoteAuthTests() {
       {wire::Action::kLogin, "unknown", "wrong-password"}, accounts,
       "10.0.0.9", now);
   const auto wrong_password = remote.Handle(
-      {wire::Action::kLogin, "alice", "wrong-password"}, accounts,
+      {wire::Action::kLogin, "alice42", "wrong-password"}, accounts,
       "10.0.0.9", now);
   Require(unknown.status == wire::Status::kError &&
           unknown.error == wire::ErrorCode::kInvalidCredentials &&
@@ -83,12 +92,12 @@ int RunRemoteAuthTests() {
           store.tickets_added == tickets_before_failure);
   for (int i = 0; i < 10; ++i) {
     auto bad = remote.Handle(
-        {wire::Action::kLogin, "alice", "wrong-password"}, accounts,
+        {wire::Action::kLogin, "alice42", "wrong-password"}, accounts,
         "10.0.0.2", now + std::chrono::seconds(i));
     Require(bad.error == wire::ErrorCode::kInvalidCredentials);
   }
   auto limited = remote.Handle(
-      {wire::Action::kLogin, "alice", "wrong-password"}, accounts, "10.0.0.2",
+      {wire::Action::kLogin, "alice42", "wrong-password"}, accounts, "10.0.0.2",
       now + std::chrono::seconds(10));
   Require(limited.error == wire::ErrorCode::kRateLimited);
   Require(limiter.Allow("10.0.0.2", wire::Action::kLogin,

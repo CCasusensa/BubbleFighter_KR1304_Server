@@ -6,6 +6,8 @@
 
 #include <stdexcept>
 #include <string_view>
+#include <json.hpp>
+#include "protocol/auth/auth_json.h"
 
 namespace bubble_fighter::server::protocol::auth {
 namespace {
@@ -29,7 +31,7 @@ void Text(std::vector<std::uint8_t>& bytes, std::string_view text) {
   bytes.insert(bytes.end(), text.begin(), text.end());
 }
 std::vector<std::uint8_t> Frame(std::vector<std::uint8_t> payload) {
-  if (payload.size() > kMaxPayloadBytes) Invalid();
+  if (payload.size() > (payload.front() == 2 ? kMaxJsonPayloadBytes : kMaxPayloadBytes)) Invalid();
   std::vector<std::uint8_t> bytes;
   Write(bytes, payload.size(), 4);
   bytes.insert(bytes.end(), payload.begin(), payload.end());
@@ -75,6 +77,14 @@ bool ValidError(ErrorCode error) {
 }  // namespace
 
 std::vector<std::uint8_t> EncodeRequest(const AuthRequest& request) {
+  if (request.version == 2) {
+    if (request.action < Action::kHealth || request.action > Action::kTicket ||
+        !ParseBoundedJson(request.json).is_object()) Invalid();
+    std::vector<std::uint8_t> bytes{2, static_cast<std::uint8_t>(request.action)};
+    bytes.insert(bytes.end(), request.json.begin(), request.json.end());
+    return Frame(std::move(bytes));
+  }
+  if (request.version != 1) Invalid();
   if (!ValidAction(request.action)) Invalid();
   std::vector<std::uint8_t> bytes{1, static_cast<std::uint8_t>(request.action)};
   if (carries_credentials(request.action)) {
@@ -90,6 +100,20 @@ std::vector<std::uint8_t> EncodeRequest(const AuthRequest& request) {
   return Frame(std::move(bytes));
 }
 AuthRequest DecodeRequest(std::span<const std::uint8_t> frame) {
+  if (frame.size() >= 6 && frame[4] == 2) {
+    std::uint32_t size = 0;
+    for (auto byte : frame.first(4)) size = (size << 8) | byte;
+    if (size < 4 || size > kMaxJsonPayloadBytes || size != frame.size() - 4 ||
+        frame[5] < 1 || frame[5] > 11) Invalid();
+    AuthRequest request;
+    request.version = 2;
+    request.action = static_cast<Action>(frame[5]);
+    request.json.assign(reinterpret_cast<const char*>(frame.data() + 6), frame.size() - 6);
+    try {
+      (void)ParseBoundedJson(request.json);
+    } catch (const nlohmann::json::exception&) { Invalid(); }
+    return request;
+  }
   Reader reader(frame);
   AuthRequest request;
   request.action = static_cast<Action>(reader.Read(1));
@@ -104,6 +128,12 @@ AuthRequest DecodeRequest(std::span<const std::uint8_t> frame) {
   return request;
 }
 std::vector<std::uint8_t> EncodeResponse(const AuthResponse& response) {
+  if (response.version == 2) {
+    (void)ParseBoundedJson(response.json);
+    std::vector<std::uint8_t> bytes{2, static_cast<std::uint8_t>(response.status)};
+    bytes.insert(bytes.end(), response.json.begin(), response.json.end());
+    return Frame(std::move(bytes));
+  }
   std::vector<std::uint8_t> bytes{1, static_cast<std::uint8_t>(response.status)};
   if (response.status == Status::kError) {
     if (!ValidError(response.error) || response.message.size() > 256 ||
@@ -141,6 +171,7 @@ AuthResponse DecodePolicyResponse(std::span<const std::uint8_t> frame) {
     response.error = static_cast<ErrorCode>(reader.Read(2));
     response.message = reader.Text();
     if (!ValidError(response.error) || response.message.size() > 256) Invalid();
+    reader.Finish();
     return response;
   }
   if (response.status != Status::kOk) Invalid();
@@ -157,6 +188,20 @@ AuthResponse DecodePolicyResponse(std::span<const std::uint8_t> frame) {
   return response;
 }
 AuthResponse DecodeResponse(std::span<const std::uint8_t> frame) {
+  if (frame.size() >= 6 && frame[4] == 2) {
+    std::uint32_t size = 0;
+    for (auto byte : frame.first(4)) size = (size << 8) | byte;
+    if (size < 4 || size > kMaxJsonPayloadBytes || size != frame.size() - 4 ||
+        frame[5] > 1) Invalid();
+    AuthResponse response;
+    response.version = 2;
+    response.status = static_cast<Status>(frame[5]);
+    response.json.assign(reinterpret_cast<const char*>(frame.data() + 6), frame.size() - 6);
+    try {
+      (void)ParseBoundedJson(response.json);
+    } catch (const nlohmann::json::exception&) { Invalid(); }
+    return response;
+  }
   Reader reader(frame);
   AuthResponse response;
   response.status = static_cast<Status>(reader.Read(1));

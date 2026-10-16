@@ -8,9 +8,12 @@
 
 namespace bubble_fighter::server::protocol::auth {
 inline constexpr std::size_t kMaxPayloadBytes = 4096;
+inline constexpr std::size_t kMaxJsonPayloadBytes = 262144;
 // kPolicy asks the server for the launcher's build-a-room mode tables.
 enum class Action : std::uint8_t {
-  kHealth = 1, kRegister = 2, kLogin = 3, kPolicy = 4
+  kHealth = 1, kRegister = 2, kLogin = 3, kPolicy = 4,
+  kSession = 5, kProfile = 6, kBindQQ = 7, kCloudGet = 8,
+  kCloudPut = 9, kLogout = 10, kTicket = 11
 };
 enum class Status : std::uint8_t { kOk = 0, kError = 1 };
 enum class ErrorCode : std::uint16_t {
@@ -25,6 +28,8 @@ struct AuthRequest {
   // with. Older launchers leave it empty and keep working; the server then
   // answers the registration without a character.
   std::string character_name;
+  std::uint8_t version = 1;
+  std::string json;
 };
 struct AuthResponse {
   Status status = Status::kOk;
@@ -37,6 +42,8 @@ struct AuthResponse {
   bool policy = false;
   std::vector<std::uint16_t> modes;
   std::vector<std::uint16_t> crazy_modes;
+  std::uint8_t version = 1;
+  std::string json;
 };
 inline constexpr std::size_t kMaxPolicyModes = 256;
 std::vector<std::uint8_t> EncodeRequest(const AuthRequest& request);

@@ -391,32 +391,40 @@ void TeamChange() {
   auto record = f.Record();
   Check(record.occupants[0].member.signed_byte_at4 == 1);
   Check(record.occupants[1].member.signed_byte_at4 == 2);
-  // 0x00ADEF30 sends no value; the room stage draws the opposite team's
-  // button, so the sender moves over.
+  Check(record.occupants[2].member.signed_byte_at4 == 1);
+  // Move peer 1 and peer 2 so the seats carry both teams.
   Check(f.leases[1].ChangeTeam({}) == rooms::RoomTeamStatus::kChanged);
   f.ExpectTeamUpdate({0, 1, 2}, 1, 1);
-  Check(f.Record().occupants[1].member.signed_byte_at4 == 1);
-  // An explicit team is honoured.
-  proto::TeamChangeRequest explicit_team;
-  explicit_team.value_at0 = 2;
-  Check(f.leases[1].ChangeTeam(explicit_team) ==
-        rooms::RoomTeamStatus::kChanged);
-  f.ExpectTeamUpdate({0, 1, 2}, 1, 2);
-  // The slot context menu names the clicked slot: adopt its occupant's team.
-  proto::TeamChangeRequest by_slot;
-  by_slot.value_at0 = 0;
-  Check(f.leases[1].ChangeTeam(by_slot) == rooms::RoomTeamStatus::kChanged);
-  f.ExpectTeamUpdate({0, 1, 2}, 1, 1);
-  // A slot that holds no occupant or already matches leaves the requester
-  // in the opposite team (the button's own meaning).
-  proto::TeamChangeRequest empty_slot;
-  empty_slot.value_at0 = 9;
-  Check(f.leases[1].ChangeTeam(empty_slot) ==
-        rooms::RoomTeamStatus::kChanged);
-  f.ExpectTeamUpdate({0, 1, 2}, 1, 2);
-  // The other two peers keep their own teams.
+  Check(f.leases[2].ChangeTeam({}) == rooms::RoomTeamStatus::kChanged);
+  f.ExpectTeamUpdate({0, 1, 2}, 2, 2);
+  Check(record.occupants[1].member.signed_byte_at4 == 2);
+  // Every form of the request, and the team the sender ends on.
+  const auto change = [&](std::optional<std::uint32_t> value) {
+    rooms::RoomTeamStatus status;
+    if (value) {
+      proto::TeamChangeRequest request;
+      request.value_at0 = value;
+      status = f.leases[1].ChangeTeam(request);
+    } else {
+      // 0x00ADEF30 sends no value: the room stage draws the button of the
+      // opposite team, so the sender moves over.
+      status = f.leases[1].ChangeTeam({});
+    }
+    Check(status == rooms::RoomTeamStatus::kChanged);
+    f.Clear();
+    return f.Record().occupants[1].member.signed_byte_at4;
+  };
+  Check(change(std::nullopt) == 2);  // button: 1 -> 2
+  // Seat 0 holds team 1 and the sender is on team 2: adopt it.
+  Check(change(std::uint32_t{0}) == 1);
+  // The same seat now matches the sender, so the button's meaning applies.
+  Check(change(std::uint32_t{0}) == 2);
+  // The sender's own seat and an empty seat do the same.
+  Check(change(std::uint32_t{1}) == 1);
+  Check(change(std::uint32_t{9}) == 2);
+  // No other member moves.
   Check(f.Record().occupants[0].member.signed_byte_at4 == 1);
-  Check(f.Record().occupants[2].member.signed_byte_at4 == 1);
+  Check(f.Record().occupants[2].member.signed_byte_at4 == 2);
   // A playing room refuses the move and sends nothing.
   Check(f.leases[1].SetMemberState({1, 0, 0}));
   Check(f.leases[2].SetMemberState({1, 0, 0}));

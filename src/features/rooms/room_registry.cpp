@@ -606,23 +606,24 @@ RoomTeamStatus RoomRegistry::ChangeTeam(
   }
   const auto current = member->member.signed_byte_at4;
   std::optional<std::uint32_t> team;
-  if (request.value_at0 && *request.value_at0 >= 1 && *request.value_at0 <= 2) {
-    // 0x004A1EB0 and the slot menu can name the team directly.
-    team = *request.value_at0;
-  } else if (request.value_at0) {
-    // The slot context menu names the clicked slot; adopt its occupant's
-    // team when it differs.
+  if (request.value_at0) {
+    // 0x004B3AC0 and 0x004A1EB0 name a slot: adopt the occupant's team when
+    // it is another member's and differs. The sender's own slot, an empty
+    // seat and a member that already matches all fall through to the
+    // button's own meaning below.
     const auto* target = room.record.FindSlot(*request.value_at0);
-    if (target && target->member.signed_byte_at4 != current &&
+    if (target && target->slot != member->slot &&
+        target->member.signed_byte_at4 != current &&
         target->member.signed_byte_at4 >= 1 &&
         target->member.signed_byte_at4 <= 2) {
       team = target->member.signed_byte_at4;
     }
   }
   // 0x00ADEF30 sends no value at all: the room stage draws the button of
-  // the opposite team, so the request means "move me over".
-  const auto requested =
-      static_cast<std::uint8_t>(team ? *team : current == 1 ? 2 : 1);
+  // the opposite team, so the request means "move me over". A two-team room
+  // makes that the same decision for every other form too.
+  const auto requested = static_cast<std::uint8_t>(
+      team ? *team : (current == 1 ? 2 : 1));
   const auto previous = member->member.signed_byte_at4;
   member->member.signed_byte_at4 = requested;
   std::vector<protocol::TcpPacket> packets;

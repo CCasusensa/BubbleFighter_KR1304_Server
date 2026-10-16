@@ -5,6 +5,7 @@
 #include <Windows.h>
 
 #include <algorithm>
+#include <atomic>
 #include <charconv>
 #include <fstream>
 #include <map>
@@ -67,10 +68,13 @@ bool ParseNumber(std::string_view text, std::uint32_t& value) {
          result.ptr == trimmed.data() + trimmed.size();
 }
 
-bool ParseFlag(std::string_view text) {
+std::optional<bool> ParseFlag(std::string_view text) {
   const auto trimmed = Trim(std::string(text));
-  return trimmed == "1" || trimmed == "true" || trimmed == "True" ||
-         trimmed == "TRUE" || trimmed == "yes";
+  if (trimmed == "1" || trimmed == "true" || trimmed == "True" ||
+      trimmed == "TRUE" || trimmed == "yes") return true;
+  if (trimmed == "0" || trimmed == "false" || trimmed == "False" ||
+      trimmed == "FALSE" || trimmed == "no") return false;
+  return std::nullopt;
 }
 
 std::u16string ToUtf16(std::string_view text) {
@@ -137,8 +141,8 @@ const std::string& Field(const std::vector<std::string>& row,
   return row[index->second];
 }
 
-std::shared_ptr<const ShopList>& active() {
-  static std::shared_ptr<const ShopList> instance;
+std::atomic<std::shared_ptr<const ShopList>>& active() {
+  static std::atomic<std::shared_ptr<const ShopList>> instance;
   return instance;
 }
 
@@ -168,7 +172,8 @@ bool ResolvePriceColumns(const std::map<std::string, std::size_t>& columns,
 }  // namespace
 
 std::optional<ShopList> ShopList::Load(const std::filesystem::path& directory,
-                                       std::string* error) {
+                                       std::string* error,
+                                       bool include_off_sale) {
   ShopList list;
   std::map<std::string, std::size_t> item_columns;
   std::map<std::string, std::size_t> offer_columns;
@@ -219,6 +224,14 @@ std::optional<ShopList> ShopList::Load(const std::filesystem::path& directory,
     entry.display_order = display_order;
     entry.main_category = main_category;
     entry.sub_category = sub_category;
+    if (item_columns.contains("on_sale")) {
+      const auto on_sale = ParseFlag(Field(row, item_columns, "on_sale"));
+      if (!on_sale) {
+        if (error) *error = "Invalid on_sale for shop item " + std::to_string(item_id);
+        return std::nullopt;
+      }
+      entry.on_sale = *on_sale;
+    }
     by_item.emplace(item_id, list.entries_.size());
     list.entries_.push_back(std::move(entry));
   }
@@ -284,6 +297,14 @@ std::optional<ShopList> ShopList::Load(const std::filesystem::path& directory,
     entry.identifier = set_id;
     entry.kind = 1;
     entry.name = name;
+    if (set_columns.contains("on_sale")) {
+      const auto on_sale = ParseFlag(Field(row, set_columns, "on_sale"));
+      if (!on_sale) {
+        if (error) *error = "Invalid on_sale for shop bundle " + std::to_string(set_id);
+        return std::nullopt;
+      }
+      entry.on_sale = *on_sale;
+    }
     // A bundle row names the page it belongs on, so the wardrobe's own bundle
     // sets (Clothes/SetClothes) reach the 套装 tab while ordinary packages stay
     // on Packages. Older sheets without the two columns keep 800/800.
@@ -311,6 +332,11 @@ std::optional<ShopList> ShopList::Load(const std::filesystem::path& directory,
     entry.prices.push_back(price);
     list.entries_.push_back(std::move(entry));
   }
+  if (!include_off_sale)
+    std::erase_if(list.entries_, [](const auto& entry) { return !entry.on_sale; });
+  list.offer_count_ = 0;
+  for (const auto& entry : list.entries_)
+    if (entry.kind == 0) list.offer_count_ += entry.prices.size();
   if (error) error->clear();
   list.by_identifier_.clear();
   list.by_stock_.clear();
@@ -339,10 +365,32 @@ const ShopListEntry* ShopList::FindEntry(std::uint32_t identifier) const {
 }
 
 void ShopList::SetActive(std::shared_ptr<const ShopList> list) {
-  active() = std::move(list);
+  active().store(std::move(list));
 }
 
-const ShopList* ShopList::Active() noexcept { return active().get(); }
+std::shared_ptr<const ShopList> ShopList::Active() noexcept { return active().load(); }
+
+ShopList ShopList::FromEntries(std::vector<ShopListEntry> entries) {
+  ShopList result;
+  std::erase_if(entries, [](const auto& entry) { return !entry.on_sale; });
+  result.entries_ = std::move(entries);
+  for (std::size_t index = 0; index < result.entries_.size(); ++index) {
+    const auto& entry = result.entries_[index];
+    if (!entry.identifier || entry.prices.empty() ||
+        !result.by_identifier_.emplace(entry.identifier, index).second)
+      throw std::invalid_argument("Invalid or duplicate shop entry.");
+    for (std::size_t offer = 0; offer < entry.prices.size(); ++offer) {
+      const auto& price = entry.prices[offer];
+      if (!price.stock_id || price.item_id != entry.identifier ||
+          (price.type != 1 && price.type != 9) || price.sell_price > 0x7fffffff ||
+          price.show_price > 0x7fffffff ||
+          !result.by_stock_.emplace(price.stock_id, std::make_pair(index, offer)).second)
+        throw std::invalid_argument("Invalid or duplicate shop offer.");
+      ++result.offer_count_;
+    }
+  }
+  return result;
+}
 
 protocol::ShopEntryResponse CreateShopListResponse(
     const ShopList& list, const protocol::ShopEntryRequest& request,
@@ -353,9 +401,6 @@ protocol::ShopEntryResponse CreateShopListResponse(
           character.character_type, character.color_index)) {
     throw std::invalid_argument(
         "Shop browsing requires a trusted persisted character.");
-  }
-  if (list.entries().empty()) {
-    throw std::runtime_error("The shop table publishes no rows.");
   }
   protocol::ShopEntryResponse response;
   // 0x009ADA00 passes (ValueAt0 == 1) to 0x00646F80: the local catalog

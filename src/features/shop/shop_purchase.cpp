@@ -50,9 +50,9 @@ ShopPurchaseResult ShopPurchase::Prepare(
     return result;
   };
   const auto* stock = ShopStockCatalog::Find(request.stock_id);
-  const auto* table = ShopList::Active();
+  const auto table = ShopList::Active();
   const auto* table_offer = table ? table->FindOffer(request.stock_id) : nullptr;
-  if (request.value_at4 != 0 || (!stock && !table_offer)) {
+  if (request.value_at4 != 0 || (table ? !table_offer : !stock)) {
     return refuse(Response::kIneligible);
   }
   // The published row wins: it carries the price the mall displayed. Without a

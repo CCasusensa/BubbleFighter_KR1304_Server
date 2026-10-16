@@ -606,11 +606,12 @@ int ServerApplication::Run(int argc, char* argv[]) const {
         // The mall is pushed from the operator's table when one was loaded at
         // startup; without it the pinned resource snapshot stays the fallback.
         shop_catalog =
-            [shop_list](const protocol::ShopEntryRequest& request,
+            [](const protocol::ShopEntryRequest& request,
                         const features::characters::CharacterRecord& character,
                         std::uint64_t observed_at) {
-              if (shop_list)
-                return features::shop::CreateShopListResponse(*shop_list,
+              const auto current = features::shop::ShopList::Active();
+              if (current)
+                return features::shop::CreateShopListResponse(*current,
                                                                request,
                                                                character);
               return features::shop::CreateShopCatalogResponse(request,

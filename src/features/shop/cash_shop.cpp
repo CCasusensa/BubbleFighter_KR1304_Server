@@ -63,9 +63,9 @@ CashPurchaseResult CashShop::Purchase(
     return result;
   };
   const auto* stock = ShopStockCatalog::Find(request.stock_id);
-  const auto* table = ShopList::Active();
+  const auto table = ShopList::Active();
   const auto* table_offer = table ? table->FindOffer(request.stock_id) : nullptr;
-  if ((!stock && !table_offer) || request.value_at4 != 0) {
+  if ((table && !table_offer) || (!stock && !table_offer) || request.value_at4 != 0) {
     return refuse(Response::kIneligible);
   }
   // The published row wins: it carries the price the mall displayed. Without a

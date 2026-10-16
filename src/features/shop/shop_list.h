@@ -32,6 +32,7 @@ struct ShopListEntry {
   std::uint32_t main_category = 0;
   std::uint32_t sub_category = 0;
   std::vector<protocol::ShopPriceRecord> prices;
+  bool on_sale = true;
 };
 
 class ShopList {
@@ -40,7 +41,8 @@ class ShopList {
   // malformed; *error then explains why. Rows with unusable values are counted
   // in skipped_rows() instead of failing the whole table.
   static std::optional<ShopList> Load(const std::filesystem::path& directory,
-                                      std::string* error);
+                                      std::string* error,
+                                      bool include_off_sale = false);
 
   const std::vector<ShopListEntry>& entries() const noexcept {
     return entries_;
@@ -56,7 +58,8 @@ class ShopList {
   // snapshot). Set once at startup, read by browsing and purchasing so the
   // displayed price and the charged price cannot drift apart.
   static void SetActive(std::shared_ptr<const ShopList> list);
-  static const ShopList* Active() noexcept;
+  static std::shared_ptr<const ShopList> Active() noexcept;
+  static ShopList FromEntries(std::vector<ShopListEntry> entries);
 
  private:
   std::vector<ShopListEntry> entries_;

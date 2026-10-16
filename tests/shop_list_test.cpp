@@ -142,6 +142,38 @@ int RunShopListTests(const std::filesystem::path& directory) {
             skipped->offer_count() == 1 && skipped->entries().size() == 2,
         "Shop table skips unusable rows");
 
+  Write(root / "shop_items.csv",
+        "item_id,name,main_category,sub_category,display_order,on_sale\n"
+        "100001,Shoe,100,106,1,0\n"
+        "100064,Spray,200,206,2,1\n");
+  Write(root / "shop_offers.csv", kOffers);
+  Write(root / "shop_sets.csv",
+        "stock_set_id,name,currency,price,on_sale\n"
+        "2000001,Bundle,9,100,0\n");
+  auto hidden = shop::ShopList::Load(root, &error);
+  Check(hidden && hidden->entries().size() == 1 &&
+            hidden->offer_count() == 1 && hidden->skipped_rows() == 0,
+        "Off-sale items and bundles are not malformed rows");
+  Check(!hidden->FindEntry(100001) && !hidden->FindOffer(1000001) &&
+            !hidden->FindOffer(1000002) && !hidden->FindEntry(2000001) &&
+            hidden->FindOffer(1000188),
+        "Off-sale cards cannot be browsed or bought by stock ID");
+  auto editable = shop::ShopList::Load(root, &error, true);
+  Check(editable && editable->entries().size() == 3 &&
+            !editable->FindEntry(100001)->on_sale &&
+            editable->FindEntry(100001)->prices.size() == 2,
+        "Management retains off-sale offers for relisting");
+  auto published = shop::ShopList::FromEntries(editable->entries());
+  Check(!published.FindEntry(100001) && !published.FindEntry(2000001) &&
+            published.FindEntry(100064),
+        "Rebuilt snapshot excludes off-sale entries");
+  Write(root / "shop_items.csv",
+        "item_id,name,main_category,sub_category,display_order,on_sale\n"
+        "100001,Shoe,100,106,1,invalid\n");
+  Check(!shop::ShopList::Load(root, &error) &&
+            error.find("on_sale") != std::string::npos,
+        "Invalid sale states do not silently publish items");
+
   // 购买必须按表价扣款：表里把这两个真实报价改成 1000 / 100，扣款就得多这些。
   const auto* lucci_stock = shop::ShopStockCatalog::Find(1000001);
   const auto* cash_stock = shop::ShopStockCatalog::Find(1000127);

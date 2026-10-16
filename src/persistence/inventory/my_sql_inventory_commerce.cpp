@@ -50,7 +50,7 @@ features::shop::ShopPurchaseResult MySqlInventoryStore::Purchase(
   // operator's row, so a re-issued offer (table says Lucci, resource says Cash)
   // was billed as a Lucci purchase and then filed into the Cash box. A loaded
   // table now wins; without one the resource row stays the source.
-  const auto* table = features::shop::ShopList::Active();
+  const auto table = features::shop::ShopList::Active();
   const auto* table_offer =
       table ? table->FindOffer(request.stock_id) : nullptr;
   const bool cash_offer =

@@ -46,8 +46,10 @@ std::optional<inventory::CashBundle> PrepareBundleOffer(std::uint32_t id) {
   const auto* set = StockSetCatalog::Find(id);
   // The published row wins over the resource price, so buying a bundle charges
   // exactly what the mall showed for it.
-  const auto* table = ShopList::Active();
+  const auto table = ShopList::Active();
   const auto* table_set = table ? table->FindEntry(id) : nullptr;
+  if (table && (!table_set || table_set->kind != 1 || table_set->prices.empty()))
+    return {};
   const auto price =
       table_set && table_set->kind == 1 && !table_set->prices.empty()
           ? static_cast<std::uint64_t>(table_set->prices.front().sell_price)
@@ -136,7 +138,10 @@ CashPurchaseResult BundleShop::Purchase(
   if (!offer || request.value_at4 != 0 ||
       character.statistics.level < definition->required_level)
     return refuse(Response::kIneligible);
-  const bool cash = definition->currency == ShopCurrency::kCash;
+  const auto table = ShopList::Active();
+  const auto* published = table ? table->FindEntry(request.stock_id) : nullptr;
+  const bool cash = published ? published->prices.front().type == 9
+                             : definition->currency == ShopCurrency::kCash;
   if ((cash ? character.statistics.cash : character.statistics.lucci) <
       offer->cash_price)
     return refuse(cash ? Response::kInsufficientCash

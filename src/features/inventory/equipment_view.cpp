@@ -7,6 +7,13 @@
 #include "features/inventory/item_catalog.h"
 
 namespace bubble_fighter::server::features::inventory {
+namespace {
+// E072: the pet/article family. A pet is worn, so it belongs in the record the
+// client renders the fighter with; every other function family is used, not
+// worn. One pet at a time.
+constexpr std::uint32_t kPetFunction = 10001;
+}  // namespace
+
 protocol::PartySupplementaryRecord EquipmentView::Create(
     const characters::CharacterRecord& character,
     const CharacterInventory& inventory,
@@ -28,32 +35,49 @@ protocol::PartySupplementaryRecord EquipmentView::Create(
   view.value = 300000U + character.character_type;
   std::uint32_t occupied_slots = 0;
   std::uint32_t occupied_parts = 0;
+  bool pet_seen = false;
   for (std::size_t index = 0; index != inventory.slots.size(); ++index) {
     const auto& slot = inventory.slots[index];
     const auto* definition = ItemCatalog::Find(slot.item_id);
     if (!definition || definition->usage != slot.usage) {
-      throw std::invalid_argument(
-          "Inventory item is absent from the current catalog or has a mismatched usage.");
+      // The view is a projection of ordinary gear. An item this catalog does
+      // not describe cannot be rendered and must not fail the whole update.
+      continue;
     }
     if (!slot.equipped) {
       continue;
     }
-    // Explicit local policy for the currently supported ordinary path.
-    // Special functions, pets, titles and ArticleSlot instances need
-    // their own state; never silently render them as ordinary gear.
-    if (!definition->enabled || definition->function != 0 ||
-        slot.item_id < 100000 || slot.item_id >= 301000 ||
-        (records[index].flags & 2) != 0 ||
+    // Special functions, pets, titles and ArticleSlot instances keep their own
+    // state (the bag marker only). They are never rendered as ordinary gear,
+    // and their presence must not fail an unrelated equipment update.
+    // 300000..300999 is the character-item band (E030); everything else with a
+    // special function or outside the ordinary range is an ArticleSlot entry.
+    const bool is_character = slot.item_id >= 300000 && slot.item_id < 301000;
+    const bool is_pet = definition->function == kPetFunction;
+    if (!is_character && !is_pet && (definition->function != 0 ||
+                          slot.item_id < 100000 || slot.item_id >= 301000)) {
+      continue;
+    }
+    if (!definition->enabled || (records[index].flags & 2) != 0 ||
         character.statistics.level < definition->required_level ||
         (definition->allowed_characters &
          (std::uint32_t{1} << character.character_type)) == 0) {
       throw std::invalid_argument(
           "Equipped item is unsupported, expired or ineligible for this character.");
     }
-    const bool is_character = slot.item_id >= 300000;
     if (is_character && slot.item_id != view.value) {
       throw std::invalid_argument(
           "Equipped character differs from the persisted current character.");
+    }
+    if (is_pet) {
+      // The client positions a pet from its own PartLocation/SlotLocation
+      // tables, so the record only has to name it. A second equipped pet is
+      // stale data: render the first and ignore the rest.
+      if (!pet_seen) {
+        pet_seen = true;
+        view.groups[0].push_back(slot.item_id);
+      }
+      continue;
     }
     const auto parts = definition->part_mask | definition->secondary_part_mask;
     if ((!is_character && definition->slot_mask == 0 && parts == 0) ||

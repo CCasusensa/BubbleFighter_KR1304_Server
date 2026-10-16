@@ -132,6 +132,25 @@ EquipmentChangeResult MySqlInventoryStore::ChangeEquipment(
                                                      prepared.inventory,
                                                      observed_at_unix_seconds)
                                  .Encode());
+  // 换角色: the prepared record carries the selected fighter when the request
+  // equipped a character item. Store it against the values this session read,
+  // so a concurrent change refuses instead of being overwritten.
+  if (prepared.character.character_type != character.character_type ||
+      prepared.character.color_index != character.color_index) {
+    Statement update(
+        connection,
+        "UPDATE Characters SET CharacterType = ?, ColorIndex = ? WHERE CharacterId = ? AND AccountId = ? AND CharacterType = ? AND ColorIndex = ?");
+    std::array parameters{Number(prepared.character.character_type),
+                          Number(prepared.character.color_index),
+                          Number(character.character_id),
+                          Number(character.account_id),
+                          Number(character.character_type),
+                          Number(character.color_index)};
+    update.Execute(parameters);
+    if (update.AffectedRows() != 1) {
+      throw std::runtime_error("Character selection changed.");
+    }
+  }
   PersistEquipment(connection, before, prepared.inventory);
   PersistPresets(connection, character.character_id, presets);
   transaction.Commit();

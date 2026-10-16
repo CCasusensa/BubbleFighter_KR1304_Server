@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "features/characters/character_creation.h"
+#include "features/characters/character_profile.h"
 #include "features/inventory/inventory_refresh.h"
 #include "protocol/codec/tcp_packet_codec.h"
 #include "protocol/inventory/cash_inventory_pickup_request.h"
@@ -203,8 +204,26 @@ std::optional<std::vector<protocol::TcpPacket>> PlayerSession::ProcessCommerce(
     // Installed storage prepares both updates before committing all
     // changed flags. No guessed success code, S3 or scene reset.
     return ChangeInventory([&] {
-      return equipment_change_(*character_, item, equip,
-                               InventoryObservationTime());
+      auto packets = equipment_change_(*character_, item, equip,
+                                       InventoryObservationTime());
+      // 换角色: a character item changes the persisted fighter. Re-read it so
+      // the session cache, the roster and the client's own profile page follow
+      // the new selection instead of describing the previous one.
+      if (characters_ && account_id_) {
+        auto current = characters_->FindByAccount(*account_id_);
+        if (current && current->character_id == character_->character_id &&
+            (current->character_type != character_->character_type ||
+             current->color_index != character_->color_index)) {
+          *character_ = *current;
+          packets.insert(
+              packets.begin(),
+              features::characters::CharacterProfile::BindKnownFields(
+                  features::characters::CreateCharacterProfileBaseline(),
+                  *character_, *account_id_)
+                  .Encode());
+        }
+      }
+      return packets;
     });
   }
   if (packet.message_id == InventoryRefreshRequest::kMessageId) {

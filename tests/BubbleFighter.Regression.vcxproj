@@ -19,6 +19,7 @@
     <ClCompile Include="remote_auth_test.cpp" />
     <ClCompile Include="auth_transport_test.cpp" />
     <ClCompile Include="..\src\network\auth_tls_server.cpp" />
+    <ClCompile Include="..\src\operations\*.cpp" />
     <ClCompile Include="..\src\network\tcp_server.cpp" />
     <ClCompile Include="cash_refund_protocol_test.cpp" />
     <ClCompile Include="gift_protocol_test.cpp" />

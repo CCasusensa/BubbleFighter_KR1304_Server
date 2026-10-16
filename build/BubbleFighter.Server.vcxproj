@@ -295,6 +295,15 @@
     <ClInclude Include="..\src\network\connection_heartbeat.h" />
     <ClCompile Include="..\src\network\tcp_server.cpp" />
     <ClInclude Include="..\src\network\tcp_server.h" />
+    <ClCompile Include="..\src\operations\operation_sql.cpp" />
+    <ClInclude Include="..\src\operations\operation_sql.h" />
+    <ClCompile Include="..\src\operations\operations_auth.cpp" />
+    <ClCompile Include="..\src\operations\operations_http.cpp" />
+    <ClInclude Include="..\src\operations\operations_internal.h" />
+    <ClCompile Include="..\src\operations\operations_inventory.cpp" />
+    <ClCompile Include="..\src\operations\operations_service.cpp" />
+    <ClInclude Include="..\src\operations\operations_service.h" />
+    <ClCompile Include="..\src\operations\operations_shop.cpp" />
     <ClInclude Include="..\src\persistence\battle_record_column.h" />
     <ClCompile Include="..\src\persistence\gifts\gift_bundle_rows.cpp" />
     <ClInclude Include="..\src\persistence\gifts\gift_bundle_rows.h" />
@@ -326,6 +335,7 @@
     <None Include="..\src\persistence\migrations\create_gifts.sql" />
     <None Include="..\src\persistence\migrations\create_inventory_slots.sql" />
     <None Include="..\src\persistence\migrations\create_match_settlements.sql" />
+    <None Include="..\src\persistence\migrations\create_operations.sql" />
     <None Include="..\src\persistence\migrations\create_social_messages.sql" />
     <None Include="..\src\persistence\migrations\create_social_relationships.sql" />
     <None Include="..\src\persistence\migrations\create_training_clan_history.sql" />
@@ -360,6 +370,7 @@
     <ClCompile Include="..\src\persistence\my_sql_social_store.cpp" />
     <ClInclude Include="..\src\persistence\my_sql_social_store.h" />
     <ClCompile Include="..\src\persistence\my_sql_training_clan.cpp" />
+    <ClInclude Include="..\src\protocol\auth\auth_json.h" />
     <ClCompile Include="..\src\protocol\auth\auth_wire.cpp" />
     <ClInclude Include="..\src\protocol\auth\auth_wire.h" />
     <ClCompile Include="..\src\protocol\battle\compressed_shot_record.cpp" />

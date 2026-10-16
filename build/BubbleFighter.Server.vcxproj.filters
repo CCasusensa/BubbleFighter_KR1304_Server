@@ -79,6 +79,9 @@
     <Filter Include="network">
       <UniqueIdentifier>{558C1B97-6F1F-5AA6-B822-13743F8615D4}</UniqueIdentifier>
     </Filter>
+    <Filter Include="operations">
+      <UniqueIdentifier>{8AE2FE5B-9F85-594F-83F1-6E8E0A19BE72}</UniqueIdentifier>
+    </Filter>
     <Filter Include="persistence">
       <UniqueIdentifier>{83E6C40D-91BB-5F73-BF59-3AD4E0C49C8A}</UniqueIdentifier>
     </Filter>
@@ -435,6 +438,24 @@
     </ClCompile>
     <ClCompile Include="..\src\network\tcp_server.cpp">
       <Filter>network</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\operations\operation_sql.cpp">
+      <Filter>operations</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\operations\operations_auth.cpp">
+      <Filter>operations</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\operations\operations_http.cpp">
+      <Filter>operations</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\operations\operations_inventory.cpp">
+      <Filter>operations</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\operations\operations_service.cpp">
+      <Filter>operations</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\operations\operations_shop.cpp">
+      <Filter>operations</Filter>
     </ClCompile>
     <ClCompile Include="..\src\persistence\gifts\gift_bundle_rows.cpp">
       <Filter>persistence\gifts</Filter>
@@ -1356,6 +1377,15 @@
     <ClInclude Include="..\src\network\tcp_server.h">
       <Filter>network</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\operations\operation_sql.h">
+      <Filter>operations</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\operations\operations_internal.h">
+      <Filter>operations</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\operations\operations_service.h">
+      <Filter>operations</Filter>
+    </ClInclude>
     <ClInclude Include="..\src\persistence\battle_record_column.h">
       <Filter>persistence</Filter>
     </ClInclude>
@@ -1400,6 +1430,9 @@
     </ClInclude>
     <ClInclude Include="..\src\persistence\my_sql_social_store.h">
       <Filter>persistence</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\protocol\auth\auth_json.h">
+      <Filter>protocol\auth</Filter>
     </ClInclude>
     <ClInclude Include="..\src\protocol\auth\auth_wire.h">
       <Filter>protocol\auth</Filter>
@@ -1929,6 +1962,9 @@
       <Filter>persistence\migrations</Filter>
     </None>
     <None Include="..\src\persistence\migrations\create_match_settlements.sql">
+      <Filter>persistence\migrations</Filter>
+    </None>
+    <None Include="..\src\persistence\migrations\create_operations.sql">
       <Filter>persistence\migrations</Filter>
     </None>
     <None Include="..\src\persistence\migrations\create_social_messages.sql">

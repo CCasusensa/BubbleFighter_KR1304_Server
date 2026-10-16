@@ -33,6 +33,7 @@
 #include "persistence/my_sql_account_store.h"
 #include "persistence/my_sql_character_store.h"
 #include "protocol/characters/create_user_info_request.h"
+#include "operations/operations_service.h"
 
 namespace bubble_fighter::server::network {
 namespace {
@@ -288,7 +289,7 @@ wire::AuthRequest ReadRequest(SOCKET socket, Context& context,
     if (status != SEC_E_OK) TransportError();
     for (const auto& buffer : buffers) {
       if (buffer.BufferType != SECBUFFER_DATA) continue;
-      if (plain.size() + buffer.cbBuffer > wire::kMaxPayloadBytes + 4) {
+      if (plain.size() + buffer.cbBuffer > wire::kMaxJsonPayloadBytes + 4) {
         throw std::invalid_argument("Invalid auth request frame.");
       }
       const auto* data = static_cast<const std::uint8_t*>(buffer.pvBuffer);
@@ -298,7 +299,9 @@ wire::AuthRequest ReadRequest(SOCKET socket, Context& context,
     if (plain.size() < 4) continue;
     std::uint32_t size = 0;
     for (std::size_t index = 0; index < 4; ++index) size = (size << 8) | plain[index];
-    if (size > wire::kMaxPayloadBytes || plain.size() > size + 4) {
+    const auto maximum = plain.size() >= 5 && plain[4] == 1
+        ? wire::kMaxPayloadBytes : wire::kMaxJsonPayloadBytes;
+    if (size > maximum || plain.size() > size + 4) {
       throw std::invalid_argument("Invalid auth request frame.");
     }
     if (plain.size() == size + 4) {
@@ -321,19 +324,18 @@ void WriteResponse(SOCKET socket, Credential& credential, Context& context,
   if (QueryContextAttributesW(&context.value, SECPKG_ATTR_STREAM_SIZES, &sizes) !=
       SEC_E_OK) TransportError();
   const auto plain = wire::EncodeResponse(response);
-  if (plain.size() > sizes.cbMaximumMessage ||
-      sizes.cbHeader + plain.size() + sizes.cbTrailer > kEncryptedLimit) {
-    TransportError();
-  }
-  std::vector<std::uint8_t> encrypted(sizes.cbHeader + plain.size() +
+  if (!sizes.cbMaximumMessage) TransportError();
+  for (std::size_t offset = 0; offset < plain.size();) {
+  const auto count = std::min<std::size_t>(sizes.cbMaximumMessage, plain.size() - offset);
+  std::vector<std::uint8_t> encrypted(sizes.cbHeader + count +
                                      sizes.cbTrailer);
-  std::copy(plain.begin(), plain.end(), encrypted.begin() + sizes.cbHeader);
+  std::copy_n(plain.begin() + offset, count, encrypted.begin() + sizes.cbHeader);
   std::array<SecBuffer, 4> buffers{{
       {sizes.cbHeader, SECBUFFER_STREAM_HEADER, encrypted.data()},
-      {static_cast<ULONG>(plain.size()), SECBUFFER_DATA,
+      {static_cast<ULONG>(count), SECBUFFER_DATA,
        encrypted.data() + sizes.cbHeader},
       {sizes.cbTrailer, SECBUFFER_STREAM_TRAILER,
-       encrypted.data() + sizes.cbHeader + plain.size()},
+       encrypted.data() + sizes.cbHeader + count},
       {0, SECBUFFER_EMPTY, nullptr}}};
   SecBufferDesc descriptor{SECBUFFER_VERSION,
                           static_cast<ULONG>(buffers.size()), buffers.data()};
@@ -343,6 +345,8 @@ void WriteResponse(SOCKET socket, Credential& credential, Context& context,
       Send(socket, {static_cast<const std::uint8_t*>(buffer.pvBuffer),
                     buffer.cbBuffer}, deadline, stop);
     }
+  }
+  offset += count;
   }
   DWORD shutdown_token = SCHANNEL_SHUTDOWN;
   SecBuffer token{sizeof(shutdown_token), SECBUFFER_TOKEN, &shutdown_token};
@@ -450,8 +454,11 @@ int AuthTlsServer::Run(
   features::authentication::AttemptLimiter limiter;
   return Run(port, listen_address, certificate_thumbprint,
       RequestHandler{[&](const wire::AuthRequest& request, std::string_view peer) {
-        if (request.action == wire::Action::kHealth) return wire::AuthResponse{};
         try {
+          if (auto* operations = operations::OperationsService::Active())
+            return operations->Authenticate(request, peer, policy);
+          if (request.version != 1) return Failure(wire::ErrorCode::kUnsupported);
+          if (request.action == wire::Action::kHealth) return wire::AuthResponse{};
           persistence::MySqlAccountStore store(database_configuration);
           features::authentication::AccountAuthentication accounts(store);
           auto check = [database_configuration](std::string_view name) {

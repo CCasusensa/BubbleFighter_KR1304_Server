@@ -23,6 +23,7 @@
 #include "network/auth_tls_server.h"
 #include "network/connection_heartbeat.h"
 #include "network/tcp_server.h"
+#include "operations/operations_service.h"
 #include "persistence/my_sql_account_store.h"
 #include "persistence/my_sql_character_store.h"
 #include "persistence/my_sql_clan_store.h"
@@ -96,6 +97,7 @@ int ServerApplication::Run(int argc, char* argv[]) const {
   std::filesystem::path match_rules_path;
   std::filesystem::path channel_rules_path;
   std::filesystem::path launcher_policy_path;
+  std::filesystem::path operations_path;
   // 商城表目录（shop_items.csv / shop_offers.csv / shop_sets.csv）。
   std::filesystem::path shop_table_path;
   for (int index = 1; index < argc; ++index) {
@@ -193,6 +195,9 @@ int ServerApplication::Run(int argc, char* argv[]) const {
     } else if (argument == "--launcher-policy" && launcher_policy_path.empty() &&
                index + 1 < argc) {
       launcher_policy_path = argv[++index];
+    } else if (argument == "--operations-config" && operations_path.empty() &&
+               index + 1 < argc) {
+      operations_path = argv[++index];
     } else if (argument == "--shop-table" && shop_table_path.empty() &&
                index + 1 < argc) {
       shop_table_path = argv[++index];
@@ -243,15 +248,33 @@ int ServerApplication::Run(int argc, char* argv[]) const {
     std::cerr << "Auth service requires a database, certificate and distinct nonzero port.\n";
     return 2;
   }
+  const char* startup_stage = "operations configuration and schema";
   try {
+    // Declared before workers so HTTP/auth callbacks cannot outlive this service.
+    std::unique_ptr<operations::OperationsService> operations;
+    if (!operations_path.empty()) {
+      if (database_configuration.empty())
+        throw std::invalid_argument("Operations service requires --database-config.");
+      operations = std::make_unique<operations::OperationsService>(
+          operations_path, database_configuration, shop_table_path);
+      const std::array<unsigned int, 4> ports{
+          port, has_auth_port ? auth_port : 0, has_clan_port ? clan_port : 0,
+          operations->GmPort()};
+      for (std::size_t i = 0; i < ports.size(); ++i)
+        for (std::size_t j = i + 1; j < ports.size(); ++j)
+          if (ports[i] && ports[i] == ports[j])
+            throw std::invalid_argument("Game/auth/clan/GM ports must differ.");
+    }
     const auto advertised_ipv4 = network::TcpServer::ResolveAdvertiseAddress(
         listen_address, advertise_address);
+    startup_stage = "authentication certificate and database";
     if (has_auth_port) {
       network::AuthTlsServer::ValidateConfiguration(auth_certificate,
                                                      database_configuration);
     }
     std::shared_ptr<features::clans::ClanAuthentication> clan_authentication;
     std::unique_ptr<persistence::MySqlClanStore> clan_service_guard;
+    startup_stage = "clan schema and service lock";
     if (has_clan_port) {
       clan_service_guard =
           std::make_unique<persistence::MySqlClanStore>(database_configuration);
@@ -259,6 +282,7 @@ int ServerApplication::Run(int argc, char* argv[]) const {
       clan_authentication =
           std::make_shared<features::clans::ClanAuthentication>();
     }
+    startup_stage = "game rules";
     const auto rules =
         match_rules_path.empty()
             ? features::rooms::MatchRewardPolicy{}
@@ -271,9 +295,13 @@ int ServerApplication::Run(int argc, char* argv[]) const {
     std::shared_ptr<features::social::SocialRegistry> social;
     if (!database_configuration.empty()) {
       // Fail before listening if the required receipt migration is absent.
+      startup_stage = "match schema";
       persistence::MySqlMatchStore check_schema(database_configuration);
+      startup_stage = "inventory schema";
       persistence::MySqlInventoryStore check_inventory(database_configuration);
+      startup_stage = "social schema";
       persistence::MySqlSocialStore check_social(database_configuration);
+      startup_stage = "gift schema";
       persistence::MySqlGiftStore check_gifts(database_configuration);
       social = std::make_shared<features::social::SocialRegistry>(
           [database_configuration] {
@@ -286,6 +314,7 @@ int ServerApplication::Run(int argc, char* argv[]) const {
             .Settle(request);
       };
     }
+    startup_stage = "game services and listeners";
     const auto parties = std::make_shared<features::parties::PartyRegistry>(
         8, [social](std::uint64_t sender, std::uint64_t recipient) {
           return !social || (social->AllowsPublicChat(sender, recipient) &&
@@ -333,6 +362,9 @@ int ServerApplication::Run(int argc, char* argv[]) const {
             auto recover_at = std::chrono::steady_clock::time_point{};
             bool recovery_delayed = false;
             while (!stop.stop_requested()) {
+              auto* ops = operations::OperationsService::Active();
+              auto operation_lock = ops ? ops->LockPlayers()
+                  : std::unique_lock<std::recursive_mutex>{};
               const auto now = std::chrono::steady_clock::now();
               if (now >= recover_at) {
                 try {
@@ -358,6 +390,7 @@ int ServerApplication::Run(int argc, char* argv[]) const {
               } catch (const std::exception&) {
                 std::cerr << "Cannot poll pending match settlements.\n";
               }
+              if (operation_lock.owns_lock()) operation_lock.unlock();
               wake.wait_for(wait_lock, stop, std::chrono::milliseconds{100},
                             [] { return false; });
             }
@@ -529,6 +562,10 @@ int ServerApplication::Run(int argc, char* argv[]) const {
                   << "); using the pinned catalog." << std::endl;
       }
     }
+    if (operations) {
+      operations->RebuildShop();
+      operations->Start();
+    }
     // Build-a-room mode table: the same list the launcher policy hands to the
     // client, so the card a player clicks and the room this server hosts cannot
     // disagree. An unreadable policy leaves it empty and the strict default
@@ -553,11 +590,15 @@ int ServerApplication::Run(int argc, char* argv[]) const {
          clan_authentication, shop_list,
          playable_modes]() -> network::ConnectionHandlers {
       sessions::PlayerSession::TicketConsumer consume;
+      const std::string peer(network::AcceptedPeerAddress());
       if (!database_configuration.empty()) {
-        consume = [database_configuration](std::string_view ticket) {
+        consume = [database_configuration, peer](std::string_view ticket) {
           persistence::MySqlAccountStore store(database_configuration);
-          return features::authentication::AccountAuthentication{store}
+          auto account = features::authentication::AccountAuthentication{store}
               .ConsumeTicket(ticket);
+          if (auto* ops = operations::OperationsService::Active();
+              ops && account && ops->Banned(*account, peer)) account.reset();
+          return account;
         };
       }
       std::shared_ptr<features::characters::CharacterStore> characters;
@@ -805,14 +846,41 @@ int ServerApplication::Run(int argc, char* argv[]) const {
            },
            std::move(group),
            [owned_session] { return owned_session->ChannelRefusal(); }});
-      return network::ConnectionHeartbeat::Wrap(std::move(bound.handlers),
+      auto wrapped = network::ConnectionHeartbeat::Wrap(std::move(bound.handlers),
                                                 std::move(bound.authenticated),
                                                 idle_timeout_seconds);
+      auto* ops = operations::OperationsService::Active();
+      if (!ops) return wrapped;
+      const auto registration = ops->Connection();
+      const auto guard = [ops, registration, owned_session, peer](auto run) {
+        auto lock = ops->LockPlayers();
+        const auto account = owned_session->AccountId().value_or(0);
+        operations::Json profile{{"id",account},{"ip",peer},
+            {"state", static_cast<int>(owned_session->State())},
+            {"channel", owned_session->ChannelCategory()}};
+        if (const auto& character = owned_session->Character(); character) {
+          profile["nickname"] = operations::Utf8(character->character_name);
+          profile["level"] = character->statistics.level;
+        }
+        auto pending = ops->PollConnection(registration, account, profile, {});
+        if (pending.close_connection) return pending;
+        auto result = run();
+        result.responses.insert(result.responses.end(), pending.responses.begin(), pending.responses.end());
+        return ops->PollConnection(registration, owned_session->AccountId().value_or(0), profile, std::move(result));
+      };
+      return network::ConnectionHandlers{
+          [guard, process = std::move(wrapped.on_packet)](const protocol::TcpPacket& packet) {
+            return guard([&] { return process(packet); });
+          },
+          [guard, poll = std::move(wrapped.on_tick)] { return guard(poll); }};
     };
     const auto result = network::TcpServer{}.Run(
         static_cast<std::uint16_t>(port), once, create_handler,
         idle_timeout_seconds,
-        [handoffs, advertised_ipv4](std::uint16_t actual_port) {
+        [handoffs, advertised_ipv4, &operations, auth_port, clan_port](std::uint16_t actual_port) {
+          if (actual_port == auth_port || (clan_port && actual_port == clan_port) ||
+              (operations && actual_port == operations->GmPort()))
+            throw std::invalid_argument("Selected game port conflicts with another service.");
           const auto address = advertised_ipv4;
           handoffs->SetEndpoint({static_cast<std::uint8_t>(address >> 24),
                                  static_cast<std::uint8_t>(address >> 16),
@@ -833,7 +901,7 @@ int ServerApplication::Run(int argc, char* argv[]) const {
     if (auth_failure) std::rethrow_exception(auth_failure);
     return result;
   } catch (const std::exception& error) {
-    std::cerr << "Server error: " << error.what() << '\n';
+    std::cerr << "Server error [" << startup_stage << "]: " << error.what() << '\n';
     return 1;
   }
 }

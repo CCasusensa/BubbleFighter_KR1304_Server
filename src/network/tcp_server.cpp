@@ -15,6 +15,7 @@
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include <winsock2.h>
+#include <ws2tcpip.h>
 
 #include <array>
 #include <charconv>
@@ -26,6 +27,7 @@
 
 namespace bubble_fighter::server::network {
 namespace {
+thread_local std::string accepted_peer_address;
 [[noreturn]] void ThrowSocketError(const char* operation) {
   throw std::runtime_error(std::string(operation) + " failed: Winsock " +
                            std::to_string(WSAGetLastError()));
@@ -358,13 +360,18 @@ int RunServer(std::uint16_t port, bool once, const Factory& create_handler,
       if (available == 0) {
         continue;
       }
+      sockaddr_in peer{};
+      int peer_size = sizeof(peer);
       auto connection = std::make_shared<SocketHandle>(
-          accept(listener.Get(), nullptr, nullptr));
+          accept(listener.Get(), reinterpret_cast<sockaddr*>(&peer), &peer_size));
       ++connection_sequence;
       if (!once && workers.size() >= 64) {
         continue;
       }
       try {
+        char peer_text[INET_ADDRSTRLEN]{};
+        inet_ntop(AF_INET, &peer.sin_addr, peer_text, sizeof(peer_text));
+        accepted_peer_address = peer_text;
         auto handlers = create_handler();
         if (once) {
           ReceiveConnection<Wire>(connection->Get(), std::move(handlers),
@@ -409,6 +416,8 @@ int RunServer(std::uint16_t port, bool once, const Factory& create_handler,
   return 0;
 }
 }  // namespace
+
+std::string_view AcceptedPeerAddress() noexcept { return accepted_peer_address; }
 
 int TcpServer::Run(std::uint16_t port, bool once,
                    const PacketHandlerFactory& create_handler,

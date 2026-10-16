@@ -30,6 +30,7 @@ using PacketHandlerFactory = std::function<ConnectionHandlers()>;
 void SetConnectionLogTag(std::string tag);
 std::string_view ConnectionLogTag() noexcept;
 std::string ConnectionLogPrefix();
+std::string_view AcceptedPeerAddress() noexcept;
 
 class TcpServer {
  public:

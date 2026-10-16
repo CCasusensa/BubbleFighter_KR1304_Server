@@ -11,6 +11,12 @@ protocol::UserStatNotification CreateCharacterProfileBaseline();
 
 class CharacterProfile {
  public:
+  // Local level curve for the S105 experience range (values[2] base, values[3]
+  // next). The application installs the match-rules value once at startup;
+  // zero leaves the pair exactly as the caller supplied it, which is the
+  // previous behaviour for every existing caller.
+  static void SetExperienceCurve(std::uint32_t experience_per_level) noexcept;
+  static std::uint32_t ExperiencePerLevel() noexcept;
   // Binds only E051-confirmed fields. The caller must supply all remaining
   // fields from evidence-backed state; this does not create/send S105.
   static protocol::UserStatNotification BindKnownFields(

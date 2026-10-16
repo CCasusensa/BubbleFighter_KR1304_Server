@@ -1,11 +1,25 @@
 #include "features/characters/character_profile.h"
 
+#include <atomic>
 #include <limits>
 #include <stdexcept>
 
 #include "features/characters/character_creation.h"
 
 namespace bubble_fighter::server::features::characters {
+namespace {
+std::atomic<std::uint32_t> experience_per_level{0};
+}  // namespace
+
+void CharacterProfile::SetExperienceCurve(
+    std::uint32_t value) noexcept {
+  experience_per_level.store(value);
+}
+
+std::uint32_t CharacterProfile::ExperiencePerLevel() noexcept {
+  return experience_per_level.load();
+}
+
 protocol::UserStatNotification CreateCharacterProfileBaseline() {
   protocol::UserStatNotification profile;
   // 0x01159720 / 0x011527E0 native defaults; not original-server rewards.
@@ -37,6 +51,17 @@ protocol::UserStatNotification CharacterProfile::BindKnownFields(
   envelope.values[1] = character.statistics.experience;
   envelope.values[4] = character.statistics.lucci;
   envelope.values[5] = character.statistics.cash;
+  // Local level curve: the same (base, next) pair MatchRewardPolicy computes
+  // for a settlement, so every S105 consumer - mall, menu, fighter info - draws
+  // the identical progress bar. A zero curve leaves the pair untouched.
+  if (const auto per_level = ExperiencePerLevel(); per_level != 0) {
+    const auto base =
+        character.statistics.experience / per_level * per_level;
+    constexpr auto limit = CharacterStatistics::kMaxValue;
+    envelope.values[2] = base;
+    envelope.values[3] =
+        base > limit - per_level ? limit : base + per_level;
+  }
   // FighterInfo +36 becomes local player +60; S107 and LevelSymbolIcon
   // independently confirm level. +40 is not a third currency balance.
   envelope.fighter.values_at32[1] = character.statistics.level;

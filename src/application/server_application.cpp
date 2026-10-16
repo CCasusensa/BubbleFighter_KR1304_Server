@@ -16,6 +16,7 @@
 #include "application/account_command.h"
 #include "features/authentication/account_authentication.h"
 #include "features/authentication/launcher_policy.h"
+#include "features/characters/character_profile.h"
 #include "features/rooms/match_profile_updates.h"
 #include "features/shop/shop_catalog_response.h"
 #include "features/shop/shop_list.h"
@@ -287,6 +288,10 @@ int ServerApplication::Run(int argc, char* argv[]) const {
         match_rules_path.empty()
             ? features::rooms::MatchRewardPolicy{}
             : features::rooms::MatchRewardPolicy::Load(match_rules_path);
+  // Every S105 consumer draws the level progress bar from this curve, so the
+  // local match-rules value is installed process-wide before any session runs.
+  features::characters::CharacterProfile::SetExperienceCurve(
+      rules.experience_per_level);
     const auto channel_rules =
         channel_rules_path.empty()
             ? features::channels::ChannelRules{}

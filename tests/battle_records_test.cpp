@@ -96,6 +96,22 @@ int RunBattleRecordsTests(const std::filesystem::path& root) {
   auto actual = chars::CharacterProfile::BindKnownFields(envelope, owner, 9);
   Check(actual == expected);
   Check(proto::UserStatNotification::Decode(actual.Encode()) == expected);
+  // The local level curve only rewrites the experience range. Owner experience
+  // 330 with a 1000-point curve is base 0 / next 1000; resetting the curve must
+  // restore the caller's own values (the value every other test relies on).
+  chars::CharacterProfile::SetExperienceCurve(1000);
+  Check(chars::CharacterProfile::ExperiencePerLevel() == 1000);
+  auto range_short = envelope;
+  range_short.values[2] = 0;
+  range_short.values[3] = 0;
+  range_short = chars::CharacterProfile::BindKnownFields(range_short, owner, 9);
+  Check(range_short.values[2] == 0 && range_short.values[3] == 1000);
+  owner.statistics.experience = 1500;
+  auto range_long = chars::CharacterProfile::BindKnownFields(envelope, owner, 9);
+  Check(range_long.values[2] == 1000 && range_long.values[3] == 2000);
+  owner.statistics.experience = 330;
+  chars::CharacterProfile::SetExperienceCurve(0);
+  Check(chars::CharacterProfile::BindKnownFields(envelope, owner, 9) == expected);
   std::vector<std::uint8_t> storage{1, 0, 0, 0};
   for (const auto& c : cases)
     for (unsigned shift = 0; shift < 32; shift += 8)

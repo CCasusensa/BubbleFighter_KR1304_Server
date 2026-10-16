@@ -1,0 +1,7 @@
+{
+  "host": "127.0.0.1",
+  "game_port": 7201,
+  "auth_port": 7200,
+  "clan_port": 7202,
+  "auth_cert_thumbprint": ""
+}

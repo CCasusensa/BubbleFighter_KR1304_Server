@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="docs/assets/banner.png" width="840" alt="泡泡战士与 CatsPub 横幅">
+<img src="../docs/server/assets/banner.png" width="840" alt="泡泡战士与 CatsPub 横幅">
 
 # 🛠 BubbleFighter KR1304 Server 🛠
 
@@ -15,25 +15,25 @@
 
 <img width="100%" src="https://starify.komoridevs.icu/api/starify?owner=K1roSama&repo=BubbleFighter_KR1304_Server" alt="starify" />
 
-[快速上手](#快速上手) · [构建指南](docs/build.md) · [命令行](docs/usage.md#命令行选项) · [文档](#文档与贡献)
+[快速上手](#快速上手) · [构建指南](../docs/server/build.md) · [命令行](../docs/server/usage.md#命令行选项) · [文档](#文档与贡献)
 
 <table aria-label="community">
 <tr>
 <td align="center" width="360">
   <a href="https://qm.qq.com/q/fAcNMJVyuI">
-    <img src="docs/assets/qq.svg" height="42" alt="QQ" /><br />
+    <img src="../docs/server/assets/qq.svg" height="42" alt="QQ" /><br />
     <strong>加入 泡泡战士 K1ro 服社区</strong>
   </a>
   </td>
 <td align="center" width="360">
   <a href="https://afdian.com/a/K1roSama1337">
-    <img src="docs/assets/afdian.svg" height="42" alt="afdian" /><br />
+    <img src="../docs/server/assets/afdian.svg" height="42" alt="afdian" /><br />
     <strong>通过 爱发电 支持我们！</strong>
   </a>
 </td>
 <td align="center" width="360">
   <a href="https://ko-fi.com/k1rosama">
-    <img src="docs/assets/ko-fi.svg" height="42" alt="ko-fi" /><br />
+    <img src="../docs/server/assets/ko-fi.svg" height="42" alt="ko-fi" /><br />
     <strong>请我们喝杯咖啡！</strong>
   </a>
 </td>
@@ -46,7 +46,7 @@
 <tr>
 <td align="center" width="840">
   <a href="https://catspub.com">
-    <img src="docs/assets/ai_banner.png" alt="AI" /><br />
+    <img src="../docs/server/assets/ai_banner.png" alt="AI" /><br />
     <strong>本项目由 Catspub 中转站获得支持</strong>
   </a><br />
   <sub>稳定 · 快速 · 用户至上</sub>
@@ -76,7 +76,7 @@
   </p>
 </blockquote>
 
-<img src="docs/assets/sb2.png" alt="sb2" />
+<img src="../docs/server/assets/sb2.png" alt="sb2" />
 
 ### 傲慢、暴怒
 
@@ -87,7 +87,7 @@
   </p>
 </blockquote>
 
-<img src="docs/assets/sb.jpg" alt="sb" />
+<img src="../docs/server/assets/sb.jpg" alt="sb" />
 
 </details>
 
@@ -95,7 +95,7 @@
 
 这是一个面向 KR1304 客户端的 Windows 控制台服务端项目。源码覆盖本地账号验证、角色与库存持久化、广场、商店、练习，以及普通 PVP 房间和对局结算。数据库连接使用 MySQL C API，目前限定为同机 TCP 与 TLS 连接。
 
-**仓库不包含客户端或启动器。** 运行游戏需要另行准备匹配的 KR1304 客户端，并接入本项目的本地登录票据；具体要求见[运行与接入指南](docs/usage.md#签发登录票据并接入客户端)。
+**仓库不包含客户端或启动器。** 运行游戏需要另行准备匹配的 KR1304 客户端，并接入本项目的本地登录票据；具体要求见[运行与接入指南](../docs/server/usage.md#签发登录票据并接入客户端)。
 
 | 功能 | 源码覆盖的流程 |
 | --- | --- |
@@ -112,7 +112,7 @@
 
 ## 快速上手
 
-完成[构建与数据库准备](docs/build.md)后，在仓库根目录运行。`Local/Database.ini` 是本文约定的配置示例路径，需要自行创建：
+完成[构建与数据库准备](../docs/server/build.md)后，在仓库根目录运行。`Local/Database.ini` 是本文约定的配置示例路径，需要自行创建：
 
 ```powershell
 $server = '.\Artifacts\Bin\x64\Release\BubbleFighter.Server.exe'
@@ -126,7 +126,7 @@ BubbleFighter.Server
 Listening on 127.0.0.1:40000
 ```
 
-`40000` 是示例端口，客户端连接配置应与之对应。接下来按[运行与接入指南](docs/usage.md)创建本地账号，在另一个终端签发登录票据，再通过已完成接入的客户端连接服务端。
+`40000` 是示例端口，客户端连接配置应与之对应。接下来按[运行与接入指南](../docs/server/usage.md)创建本地账号，在另一个终端签发登录票据，再通过已完成接入的客户端连接服务端。
 
 查看命令帮助：
 
@@ -134,7 +134,7 @@ Listening on 127.0.0.1:40000
 & $server --help
 ```
 
-局域网监听、账号命令、票据有效期与全部参数见[命令行选项](docs/usage.md#命令行选项)。
+局域网监听、账号命令、票据有效期与全部参数见[命令行选项](../docs/server/usage.md#命令行选项)。
 
 ## 构建与部署
 
@@ -156,7 +156,7 @@ $mysqlRoot = 'C:\MySQL'
 msbuild .\BubbleFighter.Server.sln /m /p:Configuration=Release /p:Platform=x64 "/p:MySqlRoot=$mysqlRoot"
 ```
 
-也可在安装了上述工具链的 Visual Studio 中打开 [BubbleFighter.Server.sln](BubbleFighter.Server.sln)，选择 `x64` 后构建。构建要求由工具集和 SDK 配置决定。MySQL 路径、构建时复制的 DLL 和数据库准备步骤见[构建指南](docs/build.md)。
+也可在安装了上述工具链的 Visual Studio 中打开 [BubbleFighter.Server.sln](BubbleFighter.Server.sln)，选择 `x64` 后构建。构建要求由工具集和 SDK 配置决定。MySQL 路径、构建时复制的 DLL 和数据库准备步骤见[构建指南](../docs/server/build.md)。
 
 首次运行前需要手动应用八个数据库迁移，并配置运行账号；程序不会自动初始化数据库。数据库配置必须使用 `127.0.0.1`、TCP 和 TLS。完成后返回[快速上手](#快速上手)启动服务端。
 
@@ -168,17 +168,17 @@ msbuild .\BubbleFighter.Server.sln /m /p:Configuration=Release /p:Platform=x64 "
 - **状态保存**：角色、库存和对局结算等数据写入 MySQL；房间、广场和在线会话保存在进程内，重启后需要重新连接。
 - **客户端及启动器**：我们暂不提供该类客户端，可以从网上搜索到资源，某垃圾服垃圾启动器源码：https://mab.to/t/4PHOUFUYoLa/as1
 
-具体规则及默认值见[运行与接入指南](docs/usage.md)。
+具体规则及默认值见[运行与接入指南](../docs/server/usage.md)。
 
 ## 文档与贡献
 
 | 文档 | 内容 |
 | --- | --- |
-| [构建指南](docs/build.md) | 环境要求、编译、数据库迁移与配置、常见问题 |
-| [运行与接入指南](docs/usage.md) | 账号、登录票据、监听、客户端接入与命令行参数 |
+| [构建指南](../docs/server/build.md) | 环境要求、编译、数据库迁移与配置、常见问题 |
+| [运行与接入指南](../docs/server/usage.md) | 账号、登录票据、监听、客户端接入与命令行参数 |
 | [对局规则示例](config/examples/match_rules.ini) | 升级、奖励、评级与勋章配置 |
 | [数据库迁移](src/persistence/migrations) | 本地账号、角色、库存、武器预设与结算表定义 |
-| [开发约定](docs/development.md) | 代码规范、项目例外及检查入口 |
+| [开发约定](../docs/server/development.md) | 代码规范、项目例外及检查入口 |
 
 欢迎通过 [Issues](https://github.com/K1roSama/BubbleFighter_KR1304_Server/issues) 反馈问题，或提交 Pull Request。反馈时请附上客户端版本、服务端提交版本、复现步骤和相关日志；配置与日志中的密码及登录票据请先移除。
 

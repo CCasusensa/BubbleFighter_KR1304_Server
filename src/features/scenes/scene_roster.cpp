@@ -63,9 +63,16 @@ protocol::GotoRoomNotification SceneRoster::ComposePractice(
 protocol::GotoRoomNotification SceneRoster::ComposeRoom(
     protocol::GotoRoomNotification envelope, std::span<const SceneSlot> slots,
     std::uint32_t local_slot, std::uint64_t authenticated_account_id) {
+  // The room's mode travels inside the client's own configuration, exactly like
+  // the rest of the descriptor: every hosted mode publishes through this path.
+  // Pinning short_at4 to 1 (竞技模式) made every other mode's creation end the
+  // session, because this throws instead of refusing.
+  // ValueAt0 carries the create dialog's chkOption bits (0x008560D7), which
+  // every hosted room keeps; a bit the dialog cannot set stays unsupported.
   if (envelope.descriptor.session_type != 2 ||
-      envelope.descriptor.configuration.short_at4 != 1 || slots.size() > 16 ||
-      envelope.descriptor.configuration.value_at0 != 0) {
+      slots.size() > 12 ||
+      (envelope.descriptor.configuration.value_at0 &
+       ~protocol::SessionDescriptor::kRoomOptionFlags) != 0) {
     throw std::invalid_argument("Unsupported ordinary room configuration.");
   }
   return Bind(std::move(envelope), slots, local_slot, authenticated_account_id);
@@ -92,7 +99,11 @@ protocol::GotoRoomNotification SceneRoster::Bind(
     const auto& slot = slots[index];
     auto member = slot.state;
     if (!slot.character) {
-      if (slot.equipment || member.booleans_at0[0] != 0 ||
+      // C509: an empty seat may carry only SessionMember::kClosedSeatFlag
+      // in its first boolean; it stays unoccupied and holds no player.
+      if (slot.equipment ||
+          (member.booleans_at0[0] != 0 &&
+           member.booleans_at0[0] != protocol::SessionMember::kClosedSeatFlag) ||
           member.value_at8 != 0 || !member.text_at12.empty() ||
           member.optional_at204 ||
           member.marker_at204 ==

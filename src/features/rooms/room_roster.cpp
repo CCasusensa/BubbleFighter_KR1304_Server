@@ -46,8 +46,30 @@ protocol::GotoRoomNotification RoomRoster::Snapshot(const RoomRecord& room,
     slot.character = occupant.character;
     slot.equipment = occupant.equipment;
   }
+  // C509: closed seats are published as empty members carrying only the
+  // closed bit, so a joiner immediately sees the host's seat state.
+  for (const auto seat : room.closed_seats) {
+    if (seat >= slots.size()) slots.resize(seat + 1);
+    slots.at(seat).state.booleans_at0[0] =
+        protocol::SessionMember::kClosedSeatFlag;
+  }
   return features::scenes::SceneRoster::ComposeRoom(
       std::move(envelope), slots, local_slot, local->account_id);
+}
+
+protocol::RoomSlotUpdateNotification RoomRoster::SeatState(
+    const RoomRecord& room, std::uint32_t slot) {
+  if (slot >= room.slot_count || room.FindSlot(slot)) {
+    throw std::invalid_argument(
+        "Seat-state notification for an occupied or invalid slot.");
+  }
+  protocol::RoomSlotUpdateNotification update;
+  update.slot = slot;
+  // Default member: BooleansAt0[0] is 0 (unoccupied) and +204 is absent.
+  update.member.booleans_at0[0] =
+      room.IsSeatClosed(slot) ? protocol::SessionMember::kClosedSeatFlag : 0;
+  update.team = room.team;
+  return update;
 }
 
 protocol::RoomSlotUpdateNotification RoomRoster::SlotUpdate(

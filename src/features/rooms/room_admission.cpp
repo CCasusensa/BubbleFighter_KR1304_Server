@@ -204,7 +204,8 @@ RoomGroupJoinResult RoomRegistry::JoinGroupChecked(
     result.status = RoomJoinStatus::kWrongPassword;
     return result;
   }
-  if (entries.size() > room.record.slot_count - room.record.occupants.size()) {
+  // C509: closed seats keep no joiner, so they are not capacity either.
+  if (entries.size() > room.record.OpenSeatCount()) {
     result.status = RoomJoinStatus::kFull;
     return result;
   }
@@ -213,7 +214,9 @@ RoomGroupJoinResult RoomRegistry::JoinGroupChecked(
   for (auto& entry : entries) {
     auto& member = entry.occupant;
     member.slot = 0;
-    while (candidate.FindSlot(member.slot)) ++member.slot;
+    while (candidate.FindSlot(member.slot) ||
+           candidate.IsSeatClosed(member.slot))
+      ++member.slot;
     const auto first_team = std::count_if(
         candidate.occupants.begin(), candidate.occupants.end(),
         [](const auto& value) { return value.member.signed_byte_at4 == 1; });

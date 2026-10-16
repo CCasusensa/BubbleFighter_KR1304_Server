@@ -26,6 +26,12 @@ struct SessionMemberOptionalFields {
 // Signed byte/short fields retain their wire bits; uint32 booleans retain
 // noncanonical values. Zero initialization is not a usable player profile.
 struct SessionMember {
+  // C509: the room stage stores a closed seat in the byte above the
+  // occupied flag (0x00980300 and 0x0096A730 read member + 1), so the flag
+  // is the second byte of BooleansAt0[0]. A closed seat stays unoccupied and
+  // takes no joiner.
+  static constexpr std::uint32_t kClosedSeatFlag = 0x00000100U;
+
   std::array<std::uint32_t, 3> booleans_at0{};
   std::uint8_t byte_at3 = 0;
   std::uint8_t signed_byte_at4 = 0;

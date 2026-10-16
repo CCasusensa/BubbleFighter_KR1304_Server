@@ -365,10 +365,12 @@ void CapacityAndRaces() {
     Fixture f;
     f.Adopt(f.Create({0}).members, {0});
     std::vector<rooms::RoomAdmissionEntry> initial;
-    for (std::size_t i = 1; i < 14; ++i) initial.push_back(f.Entry(i));
+    // The ordinary room hosts 12 seats: ten occupants, then a race for the
+    // final two.
+    for (std::size_t i = 1; i < 10; ++i) initial.push_back(f.Entry(i));
     auto fill =
         f.registry->JoinGroup(f.leases[0].RoomId(), {}, std::move(initial));
-    for (std::size_t i = 1; i < 14; ++i)
+    for (std::size_t i = 1; i < 10; ++i)
       f.leases[i] = std::move(fill.members[i - 1]);
     f.Clear();
     rooms::RoomGroupJoinResult left, right;
@@ -377,7 +379,7 @@ void CapacityAndRaces() {
     std::thread one([&] {
       gate.arrive_and_wait();
       try {
-        left = f.Join({14, 15});
+        left = f.Join({10, 11});
       } catch (...) {
         le = std::current_exception();
       }
@@ -385,7 +387,7 @@ void CapacityAndRaces() {
     std::thread two([&] {
       gate.arrive_and_wait();
       try {
-        right = f.Join({16, 17});
+        right = f.Join({12, 13});
       } catch (...) {
         re = std::current_exception();
       }
@@ -400,11 +402,11 @@ void CapacityAndRaces() {
     const auto& losing = left_won ? right : left;
     Check(losing.status == rooms::RoomJoinStatus::kFull &&
           losing.members.empty());
-    Check(f.registry->Find(f.leases[0].RoomId())->occupants.size() == 16);
+    Check(f.registry->Find(f.leases[0].RoomId())->occupants.size() == 12);
     Sequence(f.queues[0]->Drain(), {503, 503});
-    const std::size_t winner = left_won ? 14 : 16, loser = left_won ? 16 : 14;
-    f.Snapshot(winner, 14, 16);
-    f.Snapshot(winner + 1, 15, 16);
+    const std::size_t winner = left_won ? 10 : 12, loser = left_won ? 12 : 10;
+    f.Snapshot(winner, 10, 12);
+    f.Snapshot(winner + 1, 11, 12);
     Check(f.queues[loser]->Drain().empty() &&
           f.queues[loser + 1]->Drain().empty());
     Check(!f.registry->FindByCharacter(Fixture::Character(loser).character_id));

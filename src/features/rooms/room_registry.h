@@ -21,6 +21,8 @@
 #include "features/rooms/room_settlement_queue.h"
 #include "protocol/codec/tcp_packet_codec.h"
 #include "protocol/rooms/room_configuration_request.h"
+#include "protocol/rooms/seat_state_request.h"
+#include "protocol/rooms/team_change_request.h"
 #include "protocol/scenes/goto_room_notification.h"
 #include "protocol/scenes/session_descriptor.h"
 
@@ -64,12 +66,31 @@ struct RoomRecord {
   std::u16string password;
   // Sent unchanged in S117/S503/S511; no team assignment is implemented.
   protocol::SessionTeam team;
+  // C509: empty seats the host closed for entry, ascending and always
+  // below SlotCount. A closed seat takes no joiner and is published as an
+  // empty member carrying SessionMember::kClosedSeatFlag.
+  std::vector<std::uint32_t> closed_seats;
   // Ascending by slot; never empty for a published room.
   std::vector<RoomOccupant> occupants;
 
   const RoomOccupant* FindSlot(std::uint32_t slot) const noexcept;
+  bool IsSeatClosed(std::uint32_t slot) const noexcept;
+  // Seats a joiner may take: unoccupied and open. Closed seats are empty.
+  std::size_t OpenSeatCount() const noexcept;
   bool operator==(const RoomRecord&) const = default;
 };
+
+enum class RoomSeatStatus {
+  kChanged,
+  // The seat already holds the requested state; nothing was broadcast.
+  kUnchanged,
+  kNotHost,
+  kNotWaiting,
+  kNoSuchSeat,
+  kOccupied
+};
+
+enum class RoomTeamStatus { kChanged, kNotWaiting };
 
 class RoomRegistry;
 
@@ -123,6 +144,11 @@ class RoomLease {
   // Stores the member's C505 state and broadcasts S503. Returns false
   // (nothing sent) while the room is playing.
   bool SetMemberState(const std::array<std::uint32_t, 3>& state);
+  // C509: host closes or opens one empty seat while waiting and every
+  // member receives the seat's S503.
+  RoomSeatStatus SetSeatClosed(const protocol::SeatStateRequest& request);
+  // C515: moves the requester to a team and broadcasts its S503.
+  RoomTeamStatus ChangeTeam(const protocol::TeamChangeRequest& request);
   bool Configure(const protocol::RoomConfigurationRequest& request);
   // Host only, while waiting, with every other member ready and at least
   // minimumPlayers members: marks the room playing and broadcasts packet.
@@ -319,6 +345,11 @@ class RoomRegistry : public std::enable_shared_from_this<RoomRegistry> {
   void Leave(std::uint16_t room_id, std::uint64_t account_id) noexcept;
   bool SetMemberState(std::uint16_t room_id, std::uint64_t account_id,
                       const std::array<std::uint32_t, 3>& state);
+  RoomSeatStatus SetSeatClosed(std::uint16_t room_id,
+                               std::uint64_t account_id,
+                               const protocol::SeatStateRequest& request);
+  RoomTeamStatus ChangeTeam(std::uint16_t room_id, std::uint64_t account_id,
+                            const protocol::TeamChangeRequest& request);
   bool Configure(std::uint16_t room_id, std::uint64_t account_id,
                  const protocol::RoomConfigurationRequest& request);
   RoomStartStatus Start(std::uint16_t room_id, std::uint64_t account_id,

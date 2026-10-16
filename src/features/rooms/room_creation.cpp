@@ -1,8 +1,10 @@
 #include "features/rooms/room_creation.h"
 
 #include <algorithm>
+#include <iostream>
 #include <limits>
 #include <stdexcept>
+#include <syncstream>
 #include <utility>
 
 #include "features/rooms/room_map_catalog.h"
@@ -110,21 +112,41 @@ RoomGroupCreationOutcome RoomCreation::CreateGroup(
         {input.authenticated_account_id, character.character_id});
   }
 
-  const auto& settings = request.settings;
+  // The dialog's own checkboxes reach the wire as bits of
+  // Configuration.ValueAt0 and as the contest byte at Configuration+8
+  // (0x00856060..0x00856146). They are the host's choices and every hosted
+  // mode accepts them, so they are normalized and echoed in the room
+  // snapshot instead of being refused. 0x00962272 derives BooleanAt38 from
+  // the password alone and ValidateRequest already checked it.
+  auto settings = request.settings;
+  settings.configuration.value_at0 &= kOrdinaryOptionFlags;
+  settings.configuration.boolean_at8 &= 0xFFU;
   const auto& configuration = settings.configuration;
   if (IsLargeRoomMode(configuration.short_at4) ||
       !Contains(policy.playable_modes, configuration.short_at4)) {
+    std::osyncstream(std::cout)
+        << "Room creation refused: mode=" << configuration.short_at4
+        << " is not hosted (large room or outside the policy list)."
+        << std::endl;
     return Refuse(CreateRoomResult::kModeUnavailable);
   }
-  // Unsupported creation variants: contest rooms (0x00856146 branch on
-  // BooleanAt8), other dialogs' flag bits or trailing value, and local
+  // Unsupported creation variants: a trailing value no dialog produces, a
+  // flag bit no checkbox sets, an unknown room kind, and local
   // title/password limits. They are refused rather than reinterpreted.
-  if (request.trailing_value || configuration.boolean_at8 != 0 ||
-      configuration.value_at0 != 0 ||
+  if ((request.trailing_value && *request.trailing_value != 0) ||
+      (request.settings.configuration.value_at0 & ~kOrdinaryOptionFlags) != 0 ||
       !Contains(policy.room_kinds, configuration.values_at20[0]) ||
       settings.text_at8.empty() ||
       settings.text_at8.size() > policy.max_title_code_units ||
       request.password.size() > policy.max_password_code_units) {
+    std::osyncstream(std::cout)
+        << "Room creation refused: mode=" << configuration.short_at4
+        << " kind=" << configuration.values_at20[0]
+        << " flag_at0=" << request.settings.configuration.value_at0
+        << " flag_at8=" << request.settings.configuration.boolean_at8
+        << " trailing=" << (request.trailing_value ? 1 : 0)
+        << " title=" << settings.text_at8.size()
+        << " password=" << request.password.size() << std::endl;
     return Refuse(CreateRoomResult::kFailed);
   }
 
@@ -143,6 +165,14 @@ RoomGroupCreationOutcome RoomCreation::CreateGroup(
   RoomRecord record;
   record.room_id = reservation.RoomId();
   record.slot_count = kOrdinaryRoomSlots;
+  // Diagnostic: manual create-room tests use this line to record which wire
+  // mode id each dialog page sends (the dialog's ArrayIndex is a UI index).
+  std::osyncstream(std::cout)
+      << "Room created: mode=" << configuration.short_at4
+      << " kind=" << configuration.values_at20[0]
+      << " options=" << configuration.value_at0
+      << " contest=" << configuration.boolean_at8
+      << " slots=" << record.slot_count << std::endl;
   record.host_slot = kHostSlot;
   record.state = RoomState::kWaiting;
   record.settings = settings;

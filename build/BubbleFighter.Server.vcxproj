@@ -600,8 +600,12 @@
     <ClInclude Include="..\src\protocol\rooms\room_ready_request.h" />
     <ClCompile Include="..\src\protocol\rooms\room_slot_update_notification.cpp" />
     <ClInclude Include="..\src\protocol\rooms\room_slot_update_notification.h" />
+<ClCompile Include="..\src\protocol\rooms\seat_state_request.cpp" />
+<ClInclude Include="..\src\protocol\rooms\seat_state_request.h" />
     <ClCompile Include="..\src\protocol\rooms\start_game_request.cpp" />
     <ClInclude Include="..\src\protocol\rooms\start_game_request.h" />
+<ClCompile Include="..\src\protocol\rooms\team_change_request.cpp" />
+<ClInclude Include="..\src\protocol\rooms\team_change_request.h" />
     <ClCompile Include="..\src\protocol\scenes\channel_transfer.cpp" />
     <ClInclude Include="..\src\protocol\scenes\channel_transfer.h" />
     <ClCompile Include="..\src\protocol\scenes\chat_notification.cpp" />

@@ -62,13 +62,17 @@ class RoomCreation {
   static void ValidateRequest(const protocol::CreateRoomRequest& request);
   // 0x009D9250: a type-2 context bounds slot access with 16 entries
   // unless 0x01150EF0 selects the 36-slot variant.
-  static constexpr std::uint32_t kOrdinaryRoomSlots = 16;
+  // Ordinary room capacity. The client's own capacity table (0x01642280) sizes
+  // a type-2 session at 16 (32 when its large-room predicate fires), but the
+  // room shape the original service published - and what the live client shows
+  // - is 12 seats, for 竞技模式 and every other hosted mode alike.
+  static constexpr std::uint32_t kOrdinaryRoomSlots = 12;
   // Lobby dialog 0x00855AE0 only ORs these bits into Configuration.ValueAt0:
   // 0x1 chkOption[1] (round battle) or mode 19, 0x20 chkOption[3] (random
   // teams), 0x80 chkOption[7] (champions cup rule), 0x800 channel type 80
   // (0x00896870). chkOption[6] (organize contest) is the contest byte.
   static constexpr std::uint32_t kOrdinaryOptionFlags =
-      0x0001 | 0x0020 | 0x0080 | 0x0800;
+      protocol::SessionDescriptor::kRoomOptionFlags;
   // wgtPvp (0x01134B50): the dialog's default entry (0x005C58F4) and
   // enabled in every channel type (0x010E57D0 / 0x010E5870).
   static constexpr std::uint16_t kStandardPvpMode = 1;

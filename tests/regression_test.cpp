@@ -448,6 +448,7 @@ void RuleAndDigestTests() {
 }  // namespace
 
 int RunRoomConfigurationTests(const std::filesystem::path& fixture);
+int RunRoomSeatTeamTests(const std::filesystem::path& fixture);
 
 namespace bubble_fighter::server::tests {
 std::size_t RunSocialFeaturesTests(const std::filesystem::path& directory);
@@ -565,6 +566,9 @@ int main(int argc, char** argv) {
         RunPartyRegistryTests(std::filesystem::path(argv[1]).parent_path());
     checks += RunPlazaAdmissionTests();
     checks += RunRoomAdmissionTests();
+    checks += RunRoomSeatTeamTests(
+        std::filesystem::path(argv[1]).parent_path() /
+        "room_seat_team_packets.txt");
     checks += RunPartySessionTests();
     checks += RunPartyConsentTests();
     checks += RunPartyEquipmentTests();

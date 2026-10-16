@@ -1,7 +1,9 @@
 #include <chrono>
 #include <cstdint>
+#include <iostream>
 #include <optional>
 #include <stdexcept>
+#include <syncstream>
 #include <utility>
 #include <vector>
 
@@ -19,7 +21,9 @@
 #include "protocol/rooms/room_configuration_request.h"
 #include "protocol/rooms/room_list_request.h"
 #include "protocol/rooms/room_ready_request.h"
+#include "protocol/rooms/seat_state_request.h"
 #include "protocol/rooms/start_game_request.h"
+#include "protocol/rooms/team_change_request.h"
 #include "protocol/unresolved/client_to_server_message_0x0270.h"
 #include "sessions/menu_initialization.h"
 #include "sessions/player_session.h"
@@ -62,7 +66,9 @@ std::optional<std::vector<protocol::TcpPacket>> PlayerSession::ProcessRoom(
       packet.message_id == RoomReadyRequest::kMessageId ||
       packet.message_id == StartGameRequest::kMessageId ||
       packet.message_id == LeaveRoomRequest::kMessageId ||
-      packet.message_id == RoomConfigurationRequest::kMessageId;
+      packet.message_id == RoomConfigurationRequest::kMessageId ||
+      packet.message_id == SeatStateRequest::kMessageId ||
+      packet.message_id == TeamChangeRequest::kMessageId;
   if (!entry && !room_action && !room_) {
     return std::nullopt;
   }
@@ -111,7 +117,12 @@ std::optional<std::vector<protocol::TcpPacket>> PlayerSession::ProcessRoom(
       }
       if (playable.empty()) playable.push_back(RoomCreation::kStandardPvpMode);
       RoomCreationPolicy policy{std::move(playable),
-                                {0},
+                                // 0x005C8AC0 reads the dialog's room kind:
+                                // chkOption[0] 1 锤子战, [2] 3 极速击爆, [5] 4
+                                // 查看地图, otherwise 0. Refusing the
+                                // non-default kinds is what made "创建房间
+                                // 时候的房间选项" unrecognized.
+                                {0, 1, 3, 4},
                                 RoomCreation::kDialogTitleCodeUnits,
                                 RoomCreation::kDialogPasswordCodeUnits};
       auto outcome = RoomCreation::Create(
@@ -147,6 +158,21 @@ std::optional<std::vector<protocol::TcpPacket>> PlayerSession::ProcessRoom(
   }
   if (packet.message_id == RoomReadyRequest::kMessageId) {
     RoomActions::SetReady(room_, RoomReadyRequest::Decode(packet));
+  } else if (packet.message_id == SeatStateRequest::kMessageId) {
+    const auto status = room_.SetSeatClosed(SeatStateRequest::Decode(packet));
+    if (status != RoomSeatStatus::kChanged) {
+      std::osyncstream(std::cout)
+          << "Seat state refused: status=" << static_cast<int>(status)
+          << std::endl;
+    }
+  } else if (packet.message_id == TeamChangeRequest::kMessageId) {
+    const auto request = TeamChangeRequest::Decode(packet);
+    if (const auto status = room_.ChangeTeam(request);
+        status != RoomTeamStatus::kChanged) {
+      std::osyncstream(std::cout)
+          << "Team change refused: status=" << static_cast<int>(status)
+          << std::endl;
+    }
   } else if (packet.message_id == RoomConfigurationRequest::kMessageId) {
     if (!room_.Configure(RoomConfigurationRequest::Decode(packet))) {
       return std::vector<TcpPacket>{features::chat::SceneChat::Notice(

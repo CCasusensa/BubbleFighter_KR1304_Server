@@ -55,6 +55,14 @@ struct SessionConfiguration {
 struct SessionDescriptor {
   static constexpr std::uint32_t kMaxCollectionEntries = 1024;
   static constexpr std::uint32_t kMaxTotalCollectionEntries = 4096;
+  // 0x00856060..0x008560D7 (create/start dialog 0x00855AE0) ORs only these
+  // bits into Configuration.ValueAt0, each from one chkOption checkbox:
+  // 0x1 round battle (chkOption[1], or mode 19), 0x20 random teams
+  // (chkOption[3]), 0x80 champions-cup rule (chkOption[7]) and 0x800 the
+  // local host flag (sub_896870 shifted by 11). Home of the channel-type
+  // 0x800 write is 0x00896870. No other bit reaches the wire.
+  static constexpr std::uint32_t kRoomOptionFlags =
+      0x0001U | 0x0020U | 0x0080U | 0x0800U;
 
   std::uint16_t short_at0 = 0;
   std::uint32_t value_at4 = 0;

@@ -23,6 +23,10 @@ class RoomRoster {
   // exactly as the room S117 carries them.
   static protocol::RoomSlotUpdateNotification SlotUpdate(const RoomRecord& room,
                                                          std::uint32_t slot);
+  // C509: S503 for an empty seat the host opened or closed. The member is
+  // the default one and only carries SessionMember::kClosedSeatFlag.
+  static protocol::RoomSlotUpdateNotification SeatState(const RoomRecord& room,
+                                                        std::uint32_t slot);
   // S511 emptying a slot.
   static protocol::RoomMemberLeftNotification MemberLeft(const RoomRecord& room,
                                                          std::uint32_t slot);

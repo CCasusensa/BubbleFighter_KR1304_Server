@@ -20,6 +20,17 @@ const RoomOccupant* RoomRecord::FindSlot(std::uint32_t slot) const noexcept {
   return occupant == occupants.end() ? nullptr : &*occupant;
 }
 
+bool RoomRecord::IsSeatClosed(std::uint32_t slot) const noexcept {
+  return std::find(closed_seats.begin(), closed_seats.end(), slot) !=
+         closed_seats.end();
+}
+
+std::size_t RoomRecord::OpenSeatCount() const noexcept {
+  // A closed seat is always empty (only empty seats can be closed), so the
+  // counts never overlap.
+  return slot_count - occupants.size() - closed_seats.size();
+}
+
 RoomLease::RoomLease(std::shared_ptr<RoomRegistry> registry,
                      std::uint16_t room_id, std::uint64_t account_id) noexcept
     : registry_(std::move(registry)),
@@ -62,6 +73,22 @@ bool RoomLease::SetMemberState(const std::array<std::uint32_t, 3>& state) {
     throw std::logic_error("Room state change without a room.");
   }
   return registry_->SetMemberState(room_id_, account_id_, state);
+}
+
+RoomSeatStatus RoomLease::SetSeatClosed(
+    const protocol::SeatStateRequest& request) {
+  if (!registry_) {
+    throw std::logic_error("Seat state change without a room.");
+  }
+  return registry_->SetSeatClosed(room_id_, account_id_, request);
+}
+
+RoomTeamStatus RoomLease::ChangeTeam(
+    const protocol::TeamChangeRequest& request) {
+  if (!registry_) {
+    throw std::logic_error("Team change without a room.");
+  }
+  return registry_->ChangeTeam(room_id_, account_id_, request);
 }
 
 RoomStartStatus RoomLease::Start(const protocol::TcpPacket& packet,
@@ -506,6 +533,110 @@ bool RoomRegistry::SetMemberState(std::uint16_t room_id,
   }
   Broadcast(room, packets);
   return true;
+}
+
+RoomSeatStatus RoomRegistry::SetSeatClosed(
+    std::uint16_t room_id, std::uint64_t account_id,
+    const protocol::SeatStateRequest& request) {
+  std::lock_guard lock(mutex_);
+  const auto entry = rooms_.find(room_id);
+  if (entry == rooms_.end()) {
+    throw std::logic_error("Seat state change for a closed room.");
+  }
+  auto& room = entry->second;
+  auto& record = room.record;
+  const auto* member = FindMemberLocked(room, account_id);
+  if (!member) {
+    throw std::logic_error("Seat state change by a non-member.");
+  }
+  // 0x00980300 and 0x0096A730 case 17 both test 0x009EBF60, which compares
+  // the local slot with the room's host slot: only the host closes seats.
+  if (member->slot != record.host_slot) {
+    return RoomSeatStatus::kNotHost;
+  }
+  if (record.state != RoomState::kWaiting) {
+    return RoomSeatStatus::kNotWaiting;
+  }
+  if (request.slot >= record.slot_count) {
+    return RoomSeatStatus::kNoSuchSeat;
+  }
+  if (record.FindSlot(request.slot)) {
+    return RoomSeatStatus::kOccupied;
+  }
+  if (record.IsSeatClosed(request.slot) == (request.closed != 0)) {
+    // The seat already holds the requested state: the members' view is
+    // current, so nothing is broadcast.
+    return RoomSeatStatus::kUnchanged;
+  }
+  auto previous = record.closed_seats;
+  if (request.closed != 0) {
+    record.closed_seats.insert(
+        std::lower_bound(record.closed_seats.begin(), record.closed_seats.end(),
+                         request.slot),
+        request.slot);
+  } else {
+    std::erase(record.closed_seats, request.slot);
+  }
+  std::vector<protocol::TcpPacket> packets;
+  try {
+    packets.push_back(RoomRoster::SeatState(record, request.slot).Encode());
+  } catch (...) {
+    record.closed_seats = std::move(previous);
+    throw;
+  }
+  Broadcast(room, packets);
+  return RoomSeatStatus::kChanged;
+}
+
+RoomTeamStatus RoomRegistry::ChangeTeam(
+    std::uint16_t room_id, std::uint64_t account_id,
+    const protocol::TeamChangeRequest& request) {
+  std::lock_guard lock(mutex_);
+  const auto entry = rooms_.find(room_id);
+  if (entry == rooms_.end()) {
+    throw std::logic_error("Team change for a closed room.");
+  }
+  auto& room = entry->second;
+  auto* member = FindMemberLocked(room, account_id);
+  if (!member) {
+    throw std::logic_error("Team change by a non-member.");
+  }
+  if (room.record.state != RoomState::kWaiting) {
+    return RoomTeamStatus::kNotWaiting;
+  }
+  const auto current = member->member.signed_byte_at4;
+  std::optional<std::uint32_t> team;
+  if (request.value_at0 && *request.value_at0 >= 1 && *request.value_at0 <= 2) {
+    // 0x004A1EB0 and the slot menu can name the team directly.
+    team = *request.value_at0;
+  } else if (request.value_at0) {
+    // The slot context menu names the clicked slot; adopt its occupant's
+    // team when it differs.
+    const auto* target = room.record.FindSlot(*request.value_at0);
+    if (target && target->member.signed_byte_at4 != current &&
+        target->member.signed_byte_at4 >= 1 &&
+        target->member.signed_byte_at4 <= 2) {
+      team = target->member.signed_byte_at4;
+    }
+  }
+  // 0x00ADEF30 sends no value at all: the room stage draws the button of
+  // the opposite team, so the request means "move me over".
+  const auto requested =
+      static_cast<std::uint8_t>(team ? *team : current == 1 ? 2 : 1);
+  const auto previous = member->member.signed_byte_at4;
+  member->member.signed_byte_at4 = requested;
+  std::vector<protocol::TcpPacket> packets;
+  try {
+    packets.push_back(
+        RoomRoster::SlotUpdate(room.record, member->slot).Encode());
+  } catch (...) {
+    member->member.signed_byte_at4 = previous;
+    throw;
+  }
+  // Always broadcast, even when the team did not change: the client's own
+  // button state follows this snapshot.
+  Broadcast(room, packets);
+  return RoomTeamStatus::kChanged;
 }
 
 RoomStartStatus RoomRegistry::Start(std::uint16_t room_id,

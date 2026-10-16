@@ -17,6 +17,11 @@ namespace bubble_fighter::server::features::shop {
 namespace {
 using namespace inventory;
 constexpr auto kBalanceLimit = characters::CharacterStatistics::kMaxValue;
+// Project policy: a mall purchase lands in the wardrobe as a permanent item.
+// The ordinary offers are already published with this wire duration; a bundle
+// used to hand out the source Stock's own day count instead, so the 1/7/30-day
+// variants of one set expired even though the mall sells them as permanent.
+constexpr std::uint32_t kPermanentDuration = 0xFFFFFFFFU;
 protocol::TcpPacket Profile(const characters::CharacterRecord& character) {
   return characters::CharacterProfile::BindKnownFields(
              characters::CreateCharacterProfileBaseline(), character,
@@ -106,8 +111,12 @@ std::optional<inventory::CashBundle> PrepareBundleOffer(std::uint32_t id) {
         item->usage == InventoryUsage::kCount
             ? (std::max)(definition->max_amount, stock->duration)
             : definition->max_amount;
+    // Count items keep their pack size; everything timed becomes permanent.
+    const auto delivered = item->usage == InventoryUsage::kDuration
+                               ? kPermanentDuration
+                               : stock->duration;
     offer.components.push_back(
-        {stock_id, stock->item_id, item->usage, stock->duration, maximum});
+        {stock_id, stock->item_id, item->usage, delivered, maximum});
   }
   if (offer.components.empty() && offer.bonus_lucci == 0) return {};
   return offer;

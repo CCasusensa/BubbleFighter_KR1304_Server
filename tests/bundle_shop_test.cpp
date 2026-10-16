@@ -163,12 +163,20 @@ int RunBundleShopTests() {
       {40}, multi.purchase.character, inventory, multi.pending, now + 123);
   Check(delivered.response.result == 1 &&
         delivered.inventory.slots.size() == inventory.slots.size() + 4);
+  // Project policy: a bundle lands in the wardrobe as a permanent item, so the
+  // source Stock's own 1/7/30-day count no longer expires the delivered copy.
+  for (const auto& part : multi.pending.bundles[0].components) {
+    const auto* definition = inv::ItemCatalog::Find(part.item_id);
+    Check(definition != nullptr);
+    Check(definition->usage != inv::InventoryUsage::kDuration ||
+          part.amount == 0xFFFFFFFFU);
+  }
   for (const auto id : {100111U, 100241U, 300007U}) {
     const auto row = std::find_if(
         delivered.inventory.slots.begin(), delivered.inventory.slots.end(),
         [&](const auto& value) { return value.item_id == id; });
-    Check(row != delivered.inventory.slots.end() &&
-          row->expires_at_unix_seconds == now + 123 + 7 * 86400);
+    Check(row != delivered.inventory.slots.end() && row->quantity == 1 &&
+          !row->expires_at_unix_seconds.has_value());
   }
   // One permanently owned component rejects the entire bundle without partial
   // grants.

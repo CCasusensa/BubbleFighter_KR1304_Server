@@ -10,6 +10,11 @@ namespace bubble_fighter::server::features::shop {
 // Separate project offer policy: listed standard bundles, positive bounded
 // prices and representable ordinary components. Historical dates are metadata.
 std::optional<inventory::CashBundle> PrepareBundleOffer(std::uint32_t id);
+// The one currency decision for a bundle offer: the published row wins, the
+// resource row is the fallback. The slot allocator and the delivery branch
+// must both call this: deciding the two separately charged a bundle in one
+// currency and filed it in the other.
+bool BundleIsCashPriced(std::uint32_t id);
 class BundleShop {
  public:
   static CashPurchaseResult Purchase(

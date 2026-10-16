@@ -9,6 +9,7 @@
 #include "features/inventory/default_inventory.h"
 #include "features/inventory/item_catalog.h"
 #include "features/shop/shop_catalog_response.h"
+#include "features/shop/shop_list.h"
 #include "features/shop/stock_set_catalog.h"
 
 namespace {
@@ -331,6 +332,54 @@ int RunBundleShopTests() {
   std::cout << "Bundle publication: " << published_bundles << " cards, "
             << bytes.payload.size() << " bytes, revision "
             << catalog.catalog_revision << ".\n";
+  // Published-table regression: the operator's row decides the currency, and
+  // the slot allocator has to make the same call as the delivery branch. A
+  // Cash resource set listed for Lucci used to allocate a cash slot and then
+  // store "the last pending bundle" - an unrelated stored receipt (duplicate
+  // key) or a read past an empty vector.
+  {
+    shop::ShopListEntry card;
+    card.identifier = 2000106;
+    card.kind = 1;
+    card.name = u"X-MAS圣诞老人套装（30天）";
+    card.main_category = 100;
+    card.sub_category = 107;
+    p::ShopPriceRecord price;
+    price.stock_id = 2000106;
+    price.item_id = 2000106;
+    price.type = 1;
+    price.show_price = 100;
+    price.sell_price = 100;
+    card.prices.push_back(price);
+    shop::ShopList::SetActive(std::make_shared<const shop::ShopList>(
+        shop::ShopList::FromEntries({card})));
+    Check(!shop::BundleIsCashPriced(2000106));
+    const auto listed = shop::PrepareBundleOffer(2000106);
+    Check(listed && listed->cash_price == 100 && listed->components.size() == 5);
+    const auto bought = shop::BundleShop::Purchase({2000106, 0}, owner,
+                                                   inventory, empty, 0, now);
+    Check(bought.purchase.response.result == 1 && bought.cash_cost == 0 &&
+          bought.purchase.lucci_cost == 100 &&
+          bought.pending.bundles.empty() &&
+          bought.purchase.response.value_at40 == 0 &&
+          bought.purchase.inventory.slots.size() == inventory.slots.size() + 5);
+    Messages(bought.purchase, {105, 802, 806, 816});
+    // The same set published for Cash keeps its receipt and slot id.
+    card.prices.front().type = 9;
+    card.prices.front().show_price = 6500;
+    card.prices.front().sell_price = 6500;
+    shop::ShopList::SetActive(std::make_shared<const shop::ShopList>(
+        shop::ShopList::FromEntries({card})));
+    Check(shop::BundleIsCashPriced(2000106));
+    const auto cash = shop::BundleShop::Purchase({2000106, 0}, owner,
+                                                 inventory, empty, 77, now);
+    Check(cash.purchase.response.result == 1 && cash.cash_cost == 6500 &&
+          cash.pending.bundles.size() == 1 &&
+          cash.pending.bundles.back().slot_id == 77 &&
+          cash.purchase.response.value_at40 == 77);
+    shop::ShopList::SetActive(nullptr);
+    Check(shop::BundleIsCashPriced(2000106));
+  }
   std::cout << "Bundle shop: " << checks << " checks passed.\n";
   return checks;
 }

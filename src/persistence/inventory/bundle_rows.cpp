@@ -142,9 +142,12 @@ shop::ShopPurchaseResult PurchaseBundle(
     const protocol::ShopPurchaseRequest& request, std::uint64_t now) {
   auto pending =
       LoadCashSlots(connection, character.account_id, character.character_id);
-  const auto* definition = shop::StockSetCatalog::Find(request.stock_id);
+  // The slot allocation must use the same currency decision as the delivery
+  // branch below. Reading it from the resource row alone allocated a cash slot
+  // for a bundle the published row sells for Lucci.
+  const bool cash_offer = shop::BundleIsCashPriced(request.stock_id);
   std::uint32_t assigned = 0;
-  if (definition && definition->currency == shop::ShopCurrency::kCash) {
+  if (cash_offer) {
     Statement query(
         connection,
         "SELECT NextSlotId FROM CashInventorySequence WHERE SequenceId = 1 FOR UPDATE");
@@ -162,12 +165,21 @@ shop::ShopPurchaseResult PurchaseBundle(
                              result.purchase, now))
     return result.purchase;
   Balances(connection, character, result.purchase.character);
-  if (assigned != 0) {
+  // Only a queued cash bundle has a receipt to store. The delivery branch is
+  // the authority: a Lucci-priced bundle grants its items directly and leaves
+  // the pending list untouched, so inserting "the last pending bundle" here
+  // re-inserted an unrelated stored receipt (duplicate SlotId) or read past an
+  // empty vector.
+  const auto receipt = result.purchase.response.value_at40;
+  if (receipt != 0) {
+    if (result.pending.bundles.empty() ||
+        result.pending.bundles.back().slot_id != receipt)
+      throw std::logic_error("Cash bundle receipt was not queued.");
     Insert(connection, character.character_id, result.pending.bundles.back());
     Statement advance(
         connection,
         "UPDATE CashInventorySequence SET NextSlotId = NextSlotId + 1 WHERE SequenceId = 1 AND NextSlotId = ?");
-    std::array parameters{Number(assigned)};
+    std::array parameters{Number(receipt)};
     advance.Execute(parameters);
     if (advance.AffectedRows() != 1)
       throw std::runtime_error("Bundle allocation changed.");

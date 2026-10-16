@@ -53,6 +53,7 @@ def cache_is_valid():
 
 
 def main():
+  setup_web_dependencies()
   if cache_is_valid():
     print('Verified cached MySQL development files: ' + str(DEPENDENCY_ROOT))
     return
@@ -89,6 +90,23 @@ def main():
       'archive_sha256': MYSQL_SHA256,
       'files': files}, indent=2, sort_keys=True) + '\n', encoding='utf-8')
   print('Prepared ' + str(len(files)) + ' verified MySQL files: ' + str(DEPENDENCY_ROOT))
+
+
+def setup_web_dependencies():
+  lock = json.loads((ROOT / 'build/web_dependencies.json').read_text(encoding='utf-8'))
+  directory = ROOT / 'Artifacts/Dependencies/web'
+  directory.mkdir(parents=True, exist_ok=True)
+  for name, entry in lock.items():
+    destination = directory / name
+    if destination.is_file() and sha256(destination) == entry['sha256']:
+      continue
+    temporary = destination.with_suffix(destination.suffix + '.download')
+    with urllib.request.urlopen(entry['url'], timeout=60) as source, temporary.open('wb') as target:
+      shutil.copyfileobj(source, target)
+    if sha256(temporary) != entry['sha256']:
+      raise RuntimeError('Web dependency digest mismatch: ' + name)
+    temporary.replace(destination)
+  print('Verified pinned HTTP/JSON dependencies: ' + str(directory))
 
 
 if __name__ == '__main__':

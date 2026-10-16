@@ -5,3 +5,6 @@ Local/
 __pycache__/
 config/private/
 /tools/
+webgm-ui/node_modules/
+webgm-ui/dist/
+webgm/

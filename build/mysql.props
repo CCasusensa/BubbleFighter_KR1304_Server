@@ -5,7 +5,7 @@
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
-      <AdditionalIncludeDirectories>$(MySqlRoot)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(MySqlRoot)\include;$(MSBuildThisFileDirectory)..\Artifacts\Dependencies\web;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>$(MySqlRoot)\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>

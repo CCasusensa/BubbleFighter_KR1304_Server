@@ -700,6 +700,12 @@
     <ClCompile Include="..\src\protocol\characters\fighter_info.cpp">
       <Filter>protocol\characters</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\protocol\characters\fighter_info_request.cpp">
+      <Filter>protocol\characters</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\protocol\characters\fighter_info_show_notification.cpp">
+      <Filter>protocol\characters</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\protocol\characters\user_stat_notification.cpp">
       <Filter>protocol\characters</Filter>
     </ClCompile>
@@ -1594,6 +1600,12 @@
       <Filter>protocol\characters</Filter>
     </ClInclude>
     <ClInclude Include="..\src\protocol\characters\fighter_info.h">
+      <Filter>protocol\characters</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\protocol\characters\fighter_info_request.h">
+      <Filter>protocol\characters</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\protocol\characters\fighter_info_show_notification.h">
       <Filter>protocol\characters</Filter>
     </ClInclude>
     <ClInclude Include="..\src\protocol\characters\user_stat_notification.h">

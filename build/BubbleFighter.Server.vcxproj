@@ -479,6 +479,10 @@
     <ClInclude Include="..\src\protocol\characters\create_user_info_response.h" />
     <ClCompile Include="..\src\protocol\characters\fighter_info.cpp" />
     <ClInclude Include="..\src\protocol\characters\fighter_info.h" />
+    <ClCompile Include="..\src\protocol\characters\fighter_info_request.cpp" />
+    <ClInclude Include="..\src\protocol\characters\fighter_info_request.h" />
+    <ClCompile Include="..\src\protocol\characters\fighter_info_show_notification.cpp" />
+    <ClInclude Include="..\src\protocol\characters\fighter_info_show_notification.h" />
     <ClCompile Include="..\src\protocol\characters\user_stat_notification.cpp" />
     <ClInclude Include="..\src\protocol\characters\user_stat_notification.h" />
     <ClCompile Include="..\src\protocol\clans\clan_directory_messages.cpp" />

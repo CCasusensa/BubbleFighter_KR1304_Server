@@ -13,6 +13,7 @@
 #include "features/authentication/initial_handshake.h"
 #include "features/authentication/login_profile.h"
 #include "features/characters/character_creation.h"
+#include "features/characters/character_profile.h"
 #include "features/characters/character_store.h"
 #include "features/configuration/content_config_response.h"
 #include "features/lobby/plaza_registry.h"
@@ -23,6 +24,8 @@
 #include "protocol/characters/create_user_info_notification.h"
 #include "protocol/characters/create_user_info_request.h"
 #include "protocol/characters/create_user_info_response.h"
+#include "protocol/characters/fighter_info_request.h"
+#include "protocol/characters/fighter_info_show_notification.h"
 #include "protocol/codec/tcp_packet_codec.h"
 #include "protocol/configuration/dynamic_config_request.h"
 #include "protocol/inventory/equip_item_request.h"
@@ -410,6 +413,43 @@ std::vector<protocol::TcpPacket> PlayerSession::ProcessCore(
       plaza_packets_->Clear();
       lobby_.emplace();
       return responses;
+    }
+    if (packet.message_id == FighterInfoRequest::kMessageId) {
+      FighterInfoRequest::Decode(packet);
+      // The client sends this two-value request when the player opens 战士信息
+      // from the plaza/menu popup and opens DlgFighterInfo from S133 alone. The
+      // page body is the S105 profile, so the answer refreshes that profile and
+      // then asks for the dialog. No balance, item or scene changes here.
+      if (state_ == PlayerSessionState::kMenuInitializationSent && account_id_ &&
+          character_ && lobby_) {
+        auto profile = features::characters::CharacterProfile::BindKnownFields(
+            features::characters::CreateCharacterProfileBaseline(),
+            *character_, *account_id_);
+        // S133 repeats the same FighterInfo record twice and requires
+        // value_at0 == kValidUser; anything else makes the client show its own
+        // "异常玩家" box instead of the page.
+        FighterInfoShowNotification page;
+        page.target = profile.fighter;
+        page.self = profile.fighter;
+        // The dialog fill (0x005D7BD0) first locates the local member in the
+        // plaza array (0x009DA240) by this identity and gives up on the whole
+        // page when it is not found - which leaves every cell at its
+        // design-time text. The roster writes the character id to member +8
+        // (E050), so this field must carry the same value.
+        page.target.value_at4 =
+            static_cast<std::uint32_t>(character_->character_id);
+        page.self.value_at4 = page.target.value_at4;
+        // The fighter name cell stays empty when neither candidate carries it:
+        // the S105 envelope string and FighterInfo +8 are the two remaining
+        // sources the page can read, so both get the same real name.
+        profile.text = character_->character_name;
+        page.target.text_at8 = character_->character_name;
+        page.self.text_at8 = character_->character_name;
+        return std::vector<TcpPacket>{profile.Encode(), page.Encode()};
+      }
+      // Anywhere else (room, match, practice) the popup has no page to show;
+      // stay silent instead of rejecting a session over a read-only request.
+      return {};
     }
     if (auto responses = ProcessGifts(packet)) {
       return std::move(*responses);

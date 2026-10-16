@@ -11,6 +11,9 @@
 #include "protocol/battle/game_loading_complete_request.h"
 #include "protocol/battle/game_movement_notification.h"
 #include "protocol/battle/game_start_notification.h"
+#include "protocol/characters/fighter_info_request.h"
+#include "protocol/characters/fighter_info_show_notification.h"
+#include "protocol/characters/user_stat_notification.h"
 #include "protocol/login/client_to_server_message_0x0001.h"
 #include "protocol/login/login_request.h"
 #include "protocol/rooms/room_host_changed_notification.h"
@@ -831,6 +834,59 @@ void MultipleSourceRooms() {
   Check(admitted == 1 && !leases[0] && !leases[1]);
   Check(f.room_registry->Count() == 0);
 }
+
+// 战士信息 (DlgFighterInfo): the plaza/menu popup sends the two-value C118
+// request, and the client creates the page from the empty S133 alone, drawing
+// the S105 profile published immediately before it. Outside the menu scene the
+// read-only request is answered with silence, never with a rejected session.
+void FighterInfoPage() {
+  Fixture f;
+  proto::FighterInfoRequest request;
+  request.values = {0x00001234U, 0x00005678U};
+  Check(proto::FighterInfoRequest::Decode(request.Encode()).values ==
+        request.values);
+  const auto page = f.players[0]->Process(request.Encode());
+  Check(page.size() >= 2 && page[0].message_id == 105 &&
+        page[1].message_id == 133);
+  const auto profile = proto::UserStatNotification::Decode(page[0]);
+  Check(profile.values[0] == f.stores[0]->record.color_index &&
+        profile.fighter.values_at32[1] ==
+            f.stores[0]->record.statistics.level);
+  // The page body carries the valid-user marker first: any other value makes
+  // the client show "异常玩家" instead of the window. The field sources inside
+  // the two FighterInfo blocks are still being mapped, so only the envelope and
+  // the decode round trip are pinned here.
+  const auto page_body = proto::FighterInfoShowNotification::Decode(page[1]);
+  Check(page_body.value_at0 == proto::FighterInfoShowNotification::kValidUser &&
+        page_body.target == page_body.self &&
+        page_body.target.value_at4 ==
+            static_cast<std::uint32_t>(f.stores[0]->record.character_id));
+  Check(proto::FighterInfoRequest::Decode(request.Encode()).values ==
+        request.values);
+  const auto again = f.players[0]->Process(request.Encode());
+  Check(again.size() >= 2 && again[0].message_id == 105 &&
+        again[1].message_id == 133);
+  // Inside a room the popup has no menu page to render: no packet, no close.
+  f.Move({106, {}});
+  Sequence(f.players[0]->Process(Fixture::Create().Encode()), {});
+  f.Clear();
+  f.Drain();
+  Check(f.room_registry->Count() == 1);
+  const auto in_room = f.players[0]->Process(request.Encode());
+  Check(std::none_of(in_room.begin(), in_room.end(), [](const auto& packet) {
+    return packet.message_id == proto::FighterInfoShowNotification::kMessageId;
+  }));
+  Check(f.players[0]->State() == bf::sessions::PlayerSessionState::kInRoom);
+  // A truncated body stays a protocol error. Last, because rejecting a session
+  // is final and every later scene action polls all three players.
+  bool rejected = false;
+  try {
+    (void)f.players[2]->Process({118, {0, 0, 0}});
+  } catch (const std::exception&) {
+    rejected = true;
+  }
+  Check(rejected);
+}
 }  // namespace
 int RunPartySceneTests() {
   WholePartyGame();
@@ -840,6 +896,7 @@ int RunPartySceneTests() {
   ReservationAuthority();
   AdoptionBarrier();
   InvitationAdoptionBarrier();
+  FighterInfoPage();
   std::cout << "Party scene: " << checks << " checks passed\n";
   return checks;
 }

@@ -454,15 +454,21 @@ protocol::ShopEntryResponse CreateShopListResponse(
   }
   // Bundle cards live on the Packages tab, which the resource category list
   // does not expose as a page: append it exactly like the pinned snapshot did.
-  const bool has_bundles =
+  // Only a card that really names that page keeps the tab alive; appending it
+  // for every bundle left an empty 礼包 page once the operator took the
+  // Packages rows off sale.
+  const bool has_packages =
       std::any_of(response.items.begin(), response.items.end(),
-                  [](const auto& item) { return item.kind == 1; });
+                  [](const auto& item) {
+                    return item.kind == 1 &&
+                           item.main_category == kBundleMainCategory;
+                  });
   const bool has_bundle_tab =
       std::any_of(response.categories.begin(), response.categories.end(),
                   [](const auto& category) {
                     return category.identifier == kBundleMainCategory;
                   });
-  if (has_bundles && !has_bundle_tab) {
+  if (has_packages && !has_bundle_tab) {
     response.categories.push_back(
         {kBundleMainCategory, u"礼包", 1006,
          {{kBundleSubCategory, u"全部礼包", 1510, 2}}});

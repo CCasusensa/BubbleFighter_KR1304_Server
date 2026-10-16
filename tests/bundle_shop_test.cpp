@@ -362,6 +362,30 @@ int RunBundleShopTests() {
     shop::ShopList::SetActive(std::make_shared<const shop::ShopList>(
         shop::ShopList::FromEntries({card})));
     Check(!shop::BundleIsCashPriced(2000106));
+    // The 礼包 page is only published while a card names it: 2000106 sits on
+    // the wardrobe's 套装 page, so taking the Packages rows off sale must not
+    // leave an empty 礼包 tab behind.
+    const auto wardrobe =
+        shop::CreateShopListResponse(*shop::ShopList::Active(), {0, 107}, owner);
+    Check(std::none_of(wardrobe.categories.begin(), wardrobe.categories.end(),
+                       [](const auto& category) {
+                         return category.identifier == 800;
+                       }));
+    card.main_category = 800;
+    card.sub_category = 800;
+    shop::ShopList::SetActive(std::make_shared<const shop::ShopList>(
+        shop::ShopList::FromEntries({card})));
+    const auto packages =
+        shop::CreateShopListResponse(*shop::ShopList::Active(), {0, 800}, owner);
+    Check(std::any_of(packages.categories.begin(), packages.categories.end(),
+                      [](const auto& category) {
+                        return category.identifier == 800 &&
+                               category.name == u"礼包";
+                      }));
+    card.main_category = 100;
+    card.sub_category = 107;
+    shop::ShopList::SetActive(std::make_shared<const shop::ShopList>(
+        shop::ShopList::FromEntries({card})));
     const auto listed = shop::PrepareBundleOffer(2000106);
     Check(listed && listed->cash_price == 100 && listed->components.size() == 5);
     const auto bought = shop::BundleShop::Purchase({2000106, 0}, owner,

@@ -264,9 +264,14 @@ void MainSessions() {
   auto authentication = std::make_shared<Auth>();
   auto characters = std::make_shared<Characters>();
   int confirmations = 0;
+  bool accept_ticket = true;
+  int ticket_checks = 0;
   const auto create = [&] {
     return std::unique_ptr<sessions::PlayerSession>(new sessions::PlayerSession(
-        [](auto) { return std::optional<std::uint64_t>{44}; }, characters, {},
+        [&](auto) {
+          ++ticket_checks;
+          return accept_ticket ? std::optional<std::uint64_t>{44} : std::nullopt;
+        }, characters, {},
         {}, {}, {}, {}, {}, {}, Practice::Clock::now,
         Practice::CreateRandomSeed, {}, {}, {}, {}, {}, {}, {}, authentication,
         [&](const clans::ClanIdentity& identity,
@@ -296,6 +301,39 @@ void MainSessions() {
   auto player = create();
   Rejects([&] { issue(*player); });
   Check(player->State() == sessions::PlayerSessionState::kRejected);
+  player = create();
+  proto::ClientToServerMessage0x0001 initial;
+  initial.initial_value = 1256;
+  player->Process(initial.Encode());
+  const auto checks_before_passport = ticket_checks;
+  Check(player->Process(proto::ClanPassportRequest{}.Encode()).empty());
+  Check(player->Process(proto::ClanPassportRequest{}.Encode()).empty());
+  Check(!player->AccountId() && !player->Character() &&
+        ticket_checks == checks_before_passport &&
+        player->State() == sessions::PlayerSessionState::kAwaitingTicket);
+  proto::LoginRequest pending_login;
+  pending_login.nexon_passport = u"BFS1." + std::u16string(64, u'0');
+  const auto pending_response = player->Process(pending_login.Encode());
+  Check(pending_response.size() == 3 &&
+        pending_response.back().message_id == 21 &&
+        ticket_checks == checks_before_passport + 1);
+  auto early_binding = authentication->Consume(
+      proto::ClanPassportResponse::Decode(pending_response.back()).credentials);
+  Check(early_binding.Identity() ==
+        std::optional<clans::ClanIdentity>{{44, 71}});
+  player.reset();
+  Check(!early_binding.Identity());
+  player = create();
+  player->Process(initial.Encode());
+  Check(player->Process(proto::ClanPassportRequest{}.Encode()).empty());
+  accept_ticket = false;
+  Rejects([&] { player->Process(pending_login.Encode()); });
+  Check(player->State() == sessions::PlayerSessionState::kRejected &&
+        !player->AccountId() && !player->Character());
+  accept_ticket = true;
+  player = create();
+  player->Process(initial.Encode());
+  Rejects([&] { player->Process({25, {1}}); });
   player = create();
   login(*player);
   auto credentials = issue(*player);

@@ -478,6 +478,7 @@ std::vector<protocol::TcpPacket> PlayerSession::Poll() {
 }
 
 void PlayerSession::Reject() noexcept {
+  clan_passport_pending_ = false;
   clan_game_.reset();
   channel_connection_.Release();
   channel_transfer_.reset();
@@ -529,7 +530,14 @@ std::vector<protocol::TcpPacket> PlayerSession::SendLoginProfile() {
   lobby_.emplace();
   state_ = menu_data_ ? PlayerSessionState::kAwaitingMenuInitialization
                       : PlayerSessionState::kLoginProfileSent;
-  return {std::move(packet), std::move(party)};
+  std::vector<protocol::TcpPacket> result{std::move(packet), std::move(party)};
+  if (clan_passport_pending_) {
+    clan_passport_pending_ = false;
+    auto responses = ProcessClan(protocol::ClanPassportRequest{}.Encode());
+    for (auto& response : *responses)
+      result.push_back(std::move(response));
+  }
+  return result;
 }
 
 PlayerSessionState PlayerSession::State() const noexcept { return state_; }

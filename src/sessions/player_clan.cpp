@@ -165,12 +165,26 @@ std::optional<std::vector<protocol::TcpPacket>> PlayerSession::ProcessClan(
   }
   if (packet.message_id != ClanPassportRequest::kMessageId) return {};
   ClanPassportRequest::Decode(packet);
+  // The native auxiliary socket can request its passport before C3. Retain
+  // only the request; no clan identity is granted until game authentication.
+  if (clan_authentication_ &&
+      (state_ == PlayerSessionState::kAwaitingTicket ||
+       state_ == PlayerSessionState::kAwaitingCharacterCreation ||
+       state_ == PlayerSessionState::kAwaitingCharacterProfile)) {
+    clan_passport_pending_ = true;
+    return std::vector<TcpPacket>{};
+  }
   if (state_ == PlayerSessionState::kRejected || !clan_authentication_ ||
       !account_id_ || !character_ || character_->account_id != *account_id_ ||
       !character_->character_id ||
       character_->character_id > std::numeric_limits<std::uint32_t>::max())
     throw std::runtime_error(
-        "Clan Passport requires a trusted game character.");
+        std::string("Clan Passport requires a trusted game character.") +
+        " state=" + std::to_string(static_cast<int>(state_)) +
+        " clan=" + std::to_string(static_cast<bool>(clan_authentication_)) +
+        " account=" + std::to_string(account_id_.value_or(0)) +
+        " character=" +
+        std::to_string(character_ ? character_->character_id : 0));
   if (!clan_game_) {
     clan_game_ = clan_authentication_->BindGame(
         {*account_id_, static_cast<std::uint32_t>(character_->character_id)});

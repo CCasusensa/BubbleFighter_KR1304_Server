@@ -196,6 +196,7 @@ class PlayerSession {
   features::chat::SceneChat chat_;
   std::shared_ptr<features::clans::ClanAuthentication> clan_authentication_;
   features::clans::ClanAuthentication::GameLink clan_game_;
+  bool clan_passport_pending_ = false;
   features::clans::ClanConfirmationHandler clan_confirmation_;
   features::clans::TrainingClanReconciler training_;
   features::clans::ClanProfileSource party_clan_;

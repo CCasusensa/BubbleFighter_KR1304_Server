@@ -36,6 +36,23 @@ std::u16string Text(std::span<const std::uint8_t> bytes) {
 MySqlClanStore::MySqlClanStore(const std::filesystem::path& configuration)
     : connection_(configuration) {
   {
+    Statement metadata(
+        connection_.Handle(),
+        "SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = 'information_schema' AND TABLE_NAME = 'TABLE_CONSTRAINTS' AND COLUMN_NAME = 'ENFORCED'");
+    metadata.Execute({});
+    std::uint64_t count = 0;
+    std::array fields{Number(count)};
+    if (!metadata.Fetch(fields) || count != 1)
+      throw std::runtime_error(
+          "Unsupported database CHECK-constraint metadata. KR1304 requires "
+          "MySQL 8.0.16 or newer with enforced CHECK constraints; use the "
+          "tested MySQL 8.0.46 deployment. ENFORCED belongs to "
+          "information_schema.TABLE_CONSTRAINTS, not a game table. "
+          "Run Test-KrDatabase.ps1 to identify the engine and version. "
+          "Back up the existing database before upgrading or migrating; "
+          "do not add an ENFORCED column or rerun install-new.sql.");
+  }
+  {
     Statement clans(
         connection_.Handle(),
         "SELECT ClanId, NameUtf16, IntroductionUtf16, MemberCapacity, MarkId, ClanLevel, ClanPoints, IsRecruiting, CreatedAtUnixSeconds, DisbandAtUnixSeconds FROM Clans WHERE 1 = 0");

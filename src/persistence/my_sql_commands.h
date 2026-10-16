@@ -19,9 +19,10 @@ class Statement {
     }
     if (mysql_stmt_prepare(statement_, sql.data(),
                            static_cast<unsigned long>(sql.size())) != 0) {
-      const auto code = mysql_stmt_errno(statement_);
+      const MySqlError error(mysql_stmt_errno(statement_),
+                             mysql_stmt_error(statement_));
       mysql_stmt_close(statement_);
-      throw MySqlError(code);
+      throw error;
     }
   }
   ~Statement() { mysql_stmt_close(statement_); }

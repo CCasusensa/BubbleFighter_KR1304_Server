@@ -4,13 +4,14 @@
 #include <filesystem>
 #include <memory>
 #include <stdexcept>
+#include <string_view>
 
 struct MYSQL;
 
 namespace bubble_fighter::server::persistence {
 class MySqlError : public std::runtime_error {
  public:
-  explicit MySqlError(unsigned int code);
+  explicit MySqlError(unsigned int code, std::string_view detail = {});
   unsigned int Code() const;
 
  private:

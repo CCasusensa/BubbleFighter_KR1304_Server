@@ -13,6 +13,26 @@
 
 namespace bubble_fighter::server::persistence {
 namespace {
+std::string ErrorMessage(unsigned int code, std::string_view detail) {
+  auto message = "MySQL operation failed (code " + std::to_string(code) + ").";
+  // Only expose schema identifiers; server error text can contain user data.
+  const auto prefix = code == 1054 ? std::string_view{"Unknown column '"}
+                      : code == 1146 ? std::string_view{"Table '"}
+                                     : std::string_view{};
+  if (prefix.empty() || !detail.starts_with(prefix)) return message;
+  detail.remove_prefix(prefix.size());
+  const auto end = detail.find('\'');
+  if (!end || end == std::string_view::npos || end > 128) return message;
+  const auto name = detail.substr(0, end);
+  if (name.find_first_not_of(
+          "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_.") !=
+      std::string_view::npos)
+    return message;
+  return message + (code == 1054 ? " Missing column: " : " Missing table: ") +
+         std::string(name) +
+         ". Check the configured database, migration order and database engine version.";
+}
+
 void InitializeRuntime() {
   struct Library {
     Library() {
@@ -137,9 +157,8 @@ struct MySqlConnection::Impl {
   }
 };
 
-MySqlError::MySqlError(unsigned int code)
-    : std::runtime_error("MySQL operation failed (code " +
-                         std::to_string(code) + ")."),
+MySqlError::MySqlError(unsigned int code, std::string_view detail)
+    : std::runtime_error(ErrorMessage(code, detail)),
       code_(code) {}
 unsigned int MySqlError::Code() const { return code_; }
 

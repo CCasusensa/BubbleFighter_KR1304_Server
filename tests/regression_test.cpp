@@ -21,6 +21,7 @@
 #include "protocol/login/client_to_server_message_0x0001.h"
 #include "protocol/login/login_request.h"
 #include "protocol/unresolved/client_to_server_message_0x0209.h"
+#include "persistence/my_sql_connection.h"
 #include "sessions/menu_snapshot.h"
 #include "sessions/player_session.h"
 
@@ -519,6 +520,27 @@ int main(int argc, char** argv) {
     }
     checks += RunAuthTransportTests();
     checks += RunAuthWireTests();
+    const bf::persistence::MySqlError missing_column(
+        1054, "Unknown column 'BattleRecords' in 'field list'");
+    Check(std::string(missing_column.what()).find("Missing column: BattleRecords") !=
+              std::string::npos,
+          "Missing schema identifier must be actionable");
+    const bf::persistence::MySqlError missing_table(
+        1146, "Table 'test.OperationSettings' doesn't exist");
+    Check(std::string(missing_table.what()).find("Missing table: test.OperationSettings") !=
+              std::string::npos,
+          "Missing table identifier must be actionable");
+    for (const auto& detail : {"Unknown column 'unsafe\nvalue' in 'field list'",
+                               "Unknown column 'unsafe value' in 'field list'",
+                               "untrusted database error text"}) {
+      Check(std::string(bf::persistence::MySqlError(1054, detail).what()) ==
+                "MySQL operation failed (code 1054).",
+            "Database error must not disclose arbitrary text");
+    }
+    Check(std::string(bf::persistence::MySqlError(
+                         1062, "Duplicate entry 'private' for key 'Username'").what()) ==
+              "MySQL operation failed (code 1062).",
+          "Database values must not enter diagnostics");
     checks += RunRemoteAuthTests();
     checks += RunCharacterNamePolicyTests();
     checks +=

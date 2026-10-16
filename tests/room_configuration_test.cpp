@@ -139,7 +139,9 @@ void RegistryTests() {
                                {78, guest, guest_data.member,
                                 guest_data.equipment, sink(guest_packets)});
   Check(static_cast<bool>(joined.room));
-  Check(rooms::RoomMapCatalog::Maps().size() == 78);
+  // 2026-10-16: the catalog now carries every rel_* map the client's room map
+  // picker can use (MapMeta.xml order), not just the original 78.
+  Check(rooms::RoomMapCatalog::Maps().size() == 126);
   const auto& map = rooms::RoomMapCatalog::Maps()[1];
   const auto selection = Select(map);
   const auto unchanged = *registry->Find(id);

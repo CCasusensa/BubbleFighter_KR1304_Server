@@ -16,11 +16,11 @@
   ]
  },
  "counts": {
-  "items": 4539,
-  "offers": 4682,
+  "items": 4555,
+  "offers": 4698,
   "sets": 991,
   "dropped_on_sale_items_without_offer": 2514,
-  "dropped_level5_weapons": 16
+  "dropped_level5_weapons": 0
  },
  "dropped_item_ids": [
   100003,
@@ -2538,24 +2538,7 @@
   600004,
   600005
  ],
- "dropped_level5_weapons": [
-  201046,
-  201047,
-  201048,
-  201049,
-  202114,
-  202115,
-  202116,
-  202117,
-  203152,
-  203153,
-  203154,
-  203155,
-  204082,
-  204083,
-  204084,
-  204085
- ],
+ "dropped_level5_weapons": [],
  "items": [
   {
    "item_id": 100001,
@@ -117318,6 +117301,406 @@
      "show_price": 100
     }
    ]
+  },
+  {
+   "item_id": 201046,
+   "name": "棉花手枪L5",
+   "main_category": 300,
+   "sub_category": 305,
+   "main_category_name": "Weapons",
+   "sub_category_name": "SubWeapon",
+   "display_order": 4030303,
+   "duration_kind": "day",
+   "max_duration": 360,
+   "currency": 9,
+   "money_type": "cash",
+   "on_sale": true,
+   "offers": [
+    {
+     "stock_id": 1015522,
+     "currency": 9,
+     "duration": 4294967295,
+     "quantity": 0,
+     "permanent": true,
+     "price": 100,
+     "show_price": 100
+    }
+   ]
+  },
+  {
+   "item_id": 201047,
+   "name": "爆裂手枪 L5",
+   "main_category": 300,
+   "sub_category": 305,
+   "main_category_name": "Weapons",
+   "sub_category_name": "SubWeapon",
+   "display_order": 4030303,
+   "duration_kind": "day",
+   "max_duration": 360,
+   "currency": 9,
+   "money_type": "cash",
+   "on_sale": true,
+   "offers": [
+    {
+     "stock_id": 1015538,
+     "currency": 9,
+     "duration": 4294967295,
+     "quantity": 0,
+     "permanent": true,
+     "price": 100,
+     "show_price": 100
+    }
+   ]
+  },
+  {
+   "item_id": 201048,
+   "name": "尖峰手枪 L5",
+   "main_category": 300,
+   "sub_category": 305,
+   "main_category_name": "Weapons",
+   "sub_category_name": "SubWeapon",
+   "display_order": 4030303,
+   "duration_kind": "day",
+   "max_duration": 360,
+   "currency": 9,
+   "money_type": "cash",
+   "on_sale": true,
+   "offers": [
+    {
+     "stock_id": 1015570,
+     "currency": 9,
+     "duration": 4294967295,
+     "quantity": 0,
+     "permanent": true,
+     "price": 100,
+     "show_price": 100
+    }
+   ]
+  },
+  {
+   "item_id": 201049,
+   "name": "猛兽手枪 L5",
+   "main_category": 300,
+   "sub_category": 305,
+   "main_category_name": "Weapons",
+   "sub_category_name": "SubWeapon",
+   "display_order": 4030303,
+   "duration_kind": "day",
+   "max_duration": 360,
+   "currency": 9,
+   "money_type": "cash",
+   "on_sale": true,
+   "offers": [
+    {
+     "stock_id": 1015554,
+     "currency": 9,
+     "duration": 4294967295,
+     "quantity": 0,
+     "permanent": true,
+     "price": 100,
+     "show_price": 100
+    }
+   ]
+  },
+  {
+   "item_id": 202114,
+   "name": "棉花糖步枪L5",
+   "main_category": 300,
+   "sub_category": 302,
+   "main_category_name": "Weapons",
+   "sub_category_name": "Weapon_Rifle",
+   "display_order": 4030305,
+   "duration_kind": "day",
+   "max_duration": 360,
+   "currency": 9,
+   "money_type": "cash",
+   "on_sale": true,
+   "offers": [
+    {
+     "stock_id": 1015523,
+     "currency": 9,
+     "duration": 4294967295,
+     "quantity": 0,
+     "permanent": true,
+     "price": 100,
+     "show_price": 100
+    }
+   ]
+  },
+  {
+   "item_id": 202115,
+   "name": "爆裂步枪 L5",
+   "main_category": 300,
+   "sub_category": 302,
+   "main_category_name": "Weapons",
+   "sub_category_name": "Weapon_Rifle",
+   "display_order": 4030305,
+   "duration_kind": "day",
+   "max_duration": 360,
+   "currency": 9,
+   "money_type": "cash",
+   "on_sale": true,
+   "offers": [
+    {
+     "stock_id": 1015539,
+     "currency": 9,
+     "duration": 4294967295,
+     "quantity": 0,
+     "permanent": true,
+     "price": 100,
+     "show_price": 100
+    }
+   ]
+  },
+  {
+   "item_id": 202116,
+   "name": "尖峰步枪 L5",
+   "main_category": 300,
+   "sub_category": 302,
+   "main_category_name": "Weapons",
+   "sub_category_name": "Weapon_Rifle",
+   "display_order": 4030305,
+   "duration_kind": "day",
+   "max_duration": 360,
+   "currency": 9,
+   "money_type": "cash",
+   "on_sale": true,
+   "offers": [
+    {
+     "stock_id": 1015571,
+     "currency": 9,
+     "duration": 4294967295,
+     "quantity": 0,
+     "permanent": true,
+     "price": 100,
+     "show_price": 100
+    }
+   ]
+  },
+  {
+   "item_id": 202117,
+   "name": "猛兽步枪 L5",
+   "main_category": 300,
+   "sub_category": 302,
+   "main_category_name": "Weapons",
+   "sub_category_name": "Weapon_Rifle",
+   "display_order": 4030305,
+   "duration_kind": "day",
+   "max_duration": 360,
+   "currency": 9,
+   "money_type": "cash",
+   "on_sale": true,
+   "offers": [
+    {
+     "stock_id": 1015555,
+     "currency": 9,
+     "duration": 4294967295,
+     "quantity": 0,
+     "permanent": true,
+     "price": 100,
+     "show_price": 100
+    }
+   ]
+  },
+  {
+   "item_id": 203152,
+   "name": "棉花糖散弹枪 L5",
+   "main_category": 300,
+   "sub_category": 303,
+   "main_category_name": "Weapons",
+   "sub_category_name": "Weapon_ShotGun",
+   "display_order": 4030306,
+   "duration_kind": "day",
+   "max_duration": 360,
+   "currency": 9,
+   "money_type": "cash",
+   "on_sale": true,
+   "offers": [
+    {
+     "stock_id": 1015524,
+     "currency": 9,
+     "duration": 4294967295,
+     "quantity": 0,
+     "permanent": true,
+     "price": 100,
+     "show_price": 100
+    }
+   ]
+  },
+  {
+   "item_id": 203153,
+   "name": "爆裂散弹枪 L5",
+   "main_category": 300,
+   "sub_category": 303,
+   "main_category_name": "Weapons",
+   "sub_category_name": "Weapon_ShotGun",
+   "display_order": 4030306,
+   "duration_kind": "day",
+   "max_duration": 360,
+   "currency": 9,
+   "money_type": "cash",
+   "on_sale": true,
+   "offers": [
+    {
+     "stock_id": 1015540,
+     "currency": 9,
+     "duration": 4294967295,
+     "quantity": 0,
+     "permanent": true,
+     "price": 100,
+     "show_price": 100
+    }
+   ]
+  },
+  {
+   "item_id": 203154,
+   "name": "尖峰散弹枪 L5",
+   "main_category": 300,
+   "sub_category": 303,
+   "main_category_name": "Weapons",
+   "sub_category_name": "Weapon_ShotGun",
+   "display_order": 4030306,
+   "duration_kind": "day",
+   "max_duration": 360,
+   "currency": 9,
+   "money_type": "cash",
+   "on_sale": true,
+   "offers": [
+    {
+     "stock_id": 1015572,
+     "currency": 9,
+     "duration": 4294967295,
+     "quantity": 0,
+     "permanent": true,
+     "price": 100,
+     "show_price": 100
+    }
+   ]
+  },
+  {
+   "item_id": 203155,
+   "name": "猛兽散弹枪 L5",
+   "main_category": 300,
+   "sub_category": 303,
+   "main_category_name": "Weapons",
+   "sub_category_name": "Weapon_ShotGun",
+   "display_order": 4030306,
+   "duration_kind": "day",
+   "max_duration": 360,
+   "currency": 9,
+   "money_type": "cash",
+   "on_sale": true,
+   "offers": [
+    {
+     "stock_id": 1015556,
+     "currency": 9,
+     "duration": 4294967295,
+     "quantity": 0,
+     "permanent": true,
+     "price": 100,
+     "show_price": 100
+    }
+   ]
+  },
+  {
+   "item_id": 204082,
+   "name": "棉花狙击L5",
+   "main_category": 300,
+   "sub_category": 304,
+   "main_category_name": "Weapons",
+   "sub_category_name": "Weapon_Sniper",
+   "display_order": 4030304,
+   "duration_kind": "day",
+   "max_duration": 360,
+   "currency": 9,
+   "money_type": "cash",
+   "on_sale": true,
+   "offers": [
+    {
+     "stock_id": 1015525,
+     "currency": 9,
+     "duration": 4294967295,
+     "quantity": 0,
+     "permanent": true,
+     "price": 100,
+     "show_price": 100
+    }
+   ]
+  },
+  {
+   "item_id": 204083,
+   "name": "爆裂狙击枪 L5",
+   "main_category": 300,
+   "sub_category": 304,
+   "main_category_name": "Weapons",
+   "sub_category_name": "Weapon_Sniper",
+   "display_order": 4030304,
+   "duration_kind": "day",
+   "max_duration": 360,
+   "currency": 9,
+   "money_type": "cash",
+   "on_sale": true,
+   "offers": [
+    {
+     "stock_id": 1015541,
+     "currency": 9,
+     "duration": 4294967295,
+     "quantity": 0,
+     "permanent": true,
+     "price": 100,
+     "show_price": 100
+    }
+   ]
+  },
+  {
+   "item_id": 204084,
+   "name": "尖峰狙击枪 L5",
+   "main_category": 300,
+   "sub_category": 304,
+   "main_category_name": "Weapons",
+   "sub_category_name": "Weapon_Sniper",
+   "display_order": 4030304,
+   "duration_kind": "day",
+   "max_duration": 360,
+   "currency": 9,
+   "money_type": "cash",
+   "on_sale": true,
+   "offers": [
+    {
+     "stock_id": 1015573,
+     "currency": 9,
+     "duration": 4294967295,
+     "quantity": 0,
+     "permanent": true,
+     "price": 100,
+     "show_price": 100
+    }
+   ]
+  },
+  {
+   "item_id": 204085,
+   "name": "猛兽狙击枪 L5",
+   "main_category": 300,
+   "sub_category": 304,
+   "main_category_name": "Weapons",
+   "sub_category_name": "Weapon_Sniper",
+   "display_order": 4030304,
+   "duration_kind": "day",
+   "max_duration": 360,
+   "currency": 9,
+   "money_type": "cash",
+   "on_sale": true,
+   "offers": [
+    {
+     "stock_id": 1015557,
+     "currency": 9,
+     "duration": 4294967295,
+     "quantity": 0,
+     "permanent": true,
+     "price": 100,
+     "show_price": 100
+    }
+   ]
   }
  ],
  "sets": [
@@ -141122,5 +141505,27 @@
    "price": 1000,
    "duration": 4294967295
   }
- ]
+ ],
+ "restored_level5_weapons": [
+  201046,
+  201047,
+  201048,
+  201049,
+  202114,
+  202115,
+  202116,
+  202117,
+  203152,
+  203153,
+  203154,
+  203155,
+  204082,
+  204083,
+  204084,
+  204085
+ ],
+ "restored_level5_source": {
+  "path": "D:\\BF\\KR1304\\pkn\\ConfigSh_00000\\Files\\Config\\ShopItem2.xml",
+  "sha256": "f0d2effee2f494b988443d006e9789d435350648e78d0050b99ef7b4a32941c9"
+ }
 }
